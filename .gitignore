@@ -10,3 +10,9 @@ bin/
 include/
 lib/
 pip-selfcheck.json
+
+# JSON
+*.json
+
+# credentials
+mediaman/credentials/**
