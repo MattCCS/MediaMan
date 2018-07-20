@@ -21,9 +21,5 @@ class AbstractService(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def data(self, file_id):
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def metadata(self, file_id):
+    def get(self, file_id):
         raise NotImplementedError()

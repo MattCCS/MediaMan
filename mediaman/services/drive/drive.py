@@ -4,6 +4,7 @@ Class to manage a Service connection to Google Drive.
 
 import os
 
+import googleapiclient
 import httplib2
 import apiclient.discovery
 import apiclient.http
@@ -19,7 +20,7 @@ OAUTH2_SCOPE = 'https://www.googleapis.com/auth/drive'
 class DriveService(service.AbstractService):
 
     def __init__(self):
-        self.drive_service = None
+        self.drive = None
 
     def authenticate(self):
         CLIENT_SECRETS = os.environ.get("GOOGLE_CLIENT_SECRETS", None)
@@ -47,19 +48,24 @@ class DriveService(service.AbstractService):
         # Create an authorized Drive API client.
         http = httplib2.Http()
         credentials.authorize(http)
-        self.drive_service = apiclient.discovery.build("drive", "v2", http=http)
+        self.drive = apiclient.discovery.build("drive", "v2", http=http)
 
     def files(self):
-        return self.drive_service.files().list().execute()
+        return self.drive.files().list().execute()
 
     def exists(self, file_id):
-        raise NotImplementedError()
+        try:
+            self.drive.files().get(fileId=file_id).execute()
+            return True
+        except googleapiclient.errors.HttpError as exc:
+            if exc.resp["status"] == "404":
+                return False
+            raise exc
 
-    def put(self, file_id, file_path):
+    def put(self, file_name, file_path):
         raise NotImplementedError()
+        # file_metadata = {"name": file_name, "md5Checksum": None}
+        # return self.drive.files().create(body=file_metadata, media_body=media, fields="id").execute()
 
-    def data(self, file_id):
-        raise NotImplementedError()
-
-    def metadata(self, file_id):
-        raise NotImplementedError()
+    def get(self, file_id):
+        return self.drive.files().get(fileId=file_id).execute()
