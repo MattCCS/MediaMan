@@ -1,6 +1,6 @@
 
 from mediaman.core import hashenum
-from mediaman.services.drive import drive
+from mediaman.services.drive import service as driveservice
 
 
 def prepare(service):
@@ -10,4 +10,4 @@ def prepare(service):
 
 
 def load_drive():
-    return prepare(drive.DriveService())
+    return prepare(driveservice.DriveService())
