@@ -11,7 +11,8 @@ import apiclient.http
 import oauth2client.client
 import oauth2client.file
 
-from mediaman.services import service
+from mediaman.core import hashenum
+from mediaman.core.models import service
 
 
 OAUTH2_SCOPE = 'https://www.googleapis.com/auth/drive'
@@ -21,6 +22,10 @@ class DriveService(service.AbstractService):
 
     def __init__(self):
         self.drive = None
+
+    @staticmethod
+    def hash_function():
+        return hashenum.HashFunctions.MD5
 
     def authenticate(self):
         CLIENT_SECRETS = os.environ.get("GOOGLE_CLIENT_SECRETS", None)
@@ -62,10 +67,20 @@ class DriveService(service.AbstractService):
                 return False
             raise exc
 
-    def put(self, file_name, file_path):
-        raise NotImplementedError()
-        # file_metadata = {"name": file_name, "md5Checksum": None}
-        # return self.drive.files().create(body=file_metadata, media_body=media, fields="id").execute()
+    def put(self, file_id, file_path):
+        media_body = apiclient.http.MediaFileUpload(
+            file_path,
+            mimetype="application/octet-stream",  # NOTE: this is optional
+            resumable=True
+        )
+        # The body contains the metadata for the file.
+        body = {
+            "title": file_id,
+            "description": "",  # TODO: remove the blank description?
+        }
+
+        # Perform the request and print the result.
+        return self.drive.files().insert(body=body, media_body=media_body).execute()
 
     def get(self, file_id):
         return self.drive.files().get(fileId=file_id).execute()

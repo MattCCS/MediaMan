@@ -4,6 +4,10 @@ import abc
 
 class AbstractService(abc.ABC):
 
+    @abc.abstractstaticmethod
+    def hash_function(self):
+        raise NotImplementedError()
+
     @abc.abstractmethod
     def authenticate(self):
         raise NotImplementedError()

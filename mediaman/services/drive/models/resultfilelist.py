@@ -1,8 +1,9 @@
 
-from mediaman.services.drive.models import drivefile
+from mediaman.core.models import resultfilelist
+from mediaman.services.drive.models import resultfile
 
 
-class DriveFileList:
+class DriveResultFileList(resultfilelist.AbstractResultFileList):
 
     def __init__(self, file_list_data):
         self.kind = file_list_data["kind"]
@@ -11,4 +12,7 @@ class DriveFileList:
         self.next_link = file_list_data["nextLink"]
         self.next_page_token = file_list_data["nextPageToken"]
         self.incomplete_search = file_list_data["incompleteSearch"]
-        self.items = {d["id"]: drivefile.DriveFile(d) for d in file_list_data["items"]}
+        self.items = {d["id"]: resultfile.DriveResultFile(d) for d in file_list_data["items"]}
+
+    def results(self):
+        return self.items.values()
