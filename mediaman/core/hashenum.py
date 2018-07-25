@@ -1,6 +1,7 @@
 
-import enum
+from enum import Enum, auto
 
 
-class HashFunctions(enum.Enum):
-    MD5 = enum.auto()
+class HashFunctions(Enum):
+    MD5 = auto()
+    SHA256 = auto()
