@@ -15,4 +15,5 @@ pip-selfcheck.json
 *.json
 
 # credentials
+credentials/**
 mediaman/credentials/**

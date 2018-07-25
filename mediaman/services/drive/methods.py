@@ -1,6 +1,4 @@
 
-import os
-
 import apiclient.discovery
 import apiclient.http
 import googleapiclient
@@ -8,12 +6,14 @@ import httplib2
 import oauth2client.client
 import oauth2client.file
 
+from mediaman import config
+
 
 OAUTH2_SCOPE = "https://www.googleapis.com/auth/drive"
 
 
-CLIENT_SECRETS = os.environ.get("GOOGLE_CLIENT_SECRETS", None)
-CREDENTIALS = os.environ.get("GOOGLE_CREDENTIALS", None)
+CLIENT_SECRETS = config.load("GOOGLE_CLIENT_SECRETS")
+CREDENTIALS = config.load("GOOGLE_CREDENTIALS")
 
 
 def authenticate():
