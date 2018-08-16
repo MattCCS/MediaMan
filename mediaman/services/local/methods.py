@@ -36,3 +36,19 @@ def put(file_id, file_path):
 def get(file_id):
     # TODO: implement
     raise NotImplementedError()
+    path = pathlib.Path(destination_path() / file_id)
+    try:
+        stat = path.stat()
+    except FileNotFoundError as exc:
+        raise  # TODO: raise custom error
+
+    return {
+        "filename": file_id,
+        "size": stat.st_size,
+        "kind": ...,
+        "file_extension": path.suffix[1:],
+        "checksum": ...,
+        "accessedDate": stat.st_atime,
+        "modifiedDate": stat.st_mtime,
+        "createdDate": stat.st_ctime,
+    }

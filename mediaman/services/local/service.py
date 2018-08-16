@@ -1,5 +1,5 @@
 """
-Class to manage a Service connection to the local disk.
+Class to manage a Service connection to the local drive.
 """
 
 from mediaman.core import hashenum
