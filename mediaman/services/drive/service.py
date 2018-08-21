@@ -5,7 +5,7 @@ Class to manage a Service connection to Google Drive.
 from mediaman.core import hashenum
 from mediaman.core import service
 from mediaman.services.drive import methods
-from mediaman.services.drive.models import resultfile, resultfilelist
+from mediaman.services.drive.models import resultfile, resultfilelist, receiptfile
 
 
 class DriveService(service.AbstractService):
@@ -28,9 +28,10 @@ class DriveService(service.AbstractService):
     def exists(self, file_id):
         return methods.exists(self.drive, file_id)
 
-    def put(self, file_id, file_path):
-        # TODO: return a "DriveReceiptFile"-type object
-        return methods.put(self.drive, file_id, file_path)
+    def put(self, source_file_path, destination_file_name):
+        return receiptfile.DriveReceiptFile(
+            methods.put(self.drive, source_file_path, destination_file_name)
+        )
 
     def get(self, file_id):
         return resultfile.DriveResultFile(

@@ -19,36 +19,37 @@ def destination():
     return str(destination_path())
 
 
+def extractor(path):
+    return {
+        "name": path.name,
+        "suffix": path.suffix,
+        "stat": path.stat(),
+    }
+
+
 def files():
-    return (pathlib.Path(path).name for path in glob.glob(f"{destination()}/*"))
+    return map(
+        extractor,
+        (pathlib.Path(path) for path in glob.glob(f"{destination()}/*"))
+    )
 
 
 def exists(file_id):
-    # TODO: pass file_name instead
     return (destination_path() / file_id).exists()
 
 
-def put(file_id, file_path):
-    # TODO: implement
-    raise NotImplementedError()
+def put(source_file_path, destination_file_name):
+    # TODO: check for overwriting?
+    dest = destination_path() / destination_file_name
+    with open(source_file_path, "rb") as infile:
+        with open(dest, "wb") as outfile:
+            outfile.write(infile.read())
+    return destination_file_name
 
 
 def get(file_id):
-    # TODO: implement
-    raise NotImplementedError()
     path = pathlib.Path(destination_path() / file_id)
-    try:
-        stat = path.stat()
-    except FileNotFoundError as exc:
-        raise  # TODO: raise custom error
+    if not path.exists():
+        raise FileNotFoundError()  # TODO: raise custom error
 
-    return {
-        "filename": file_id,
-        "size": stat.st_size,
-        "kind": ...,
-        "file_extension": path.suffix[1:],
-        "checksum": ...,
-        "accessedDate": stat.st_atime,
-        "modifiedDate": stat.st_mtime,
-        "createdDate": stat.st_ctime,
-    }
+    return extractor(path)
