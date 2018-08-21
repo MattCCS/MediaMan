@@ -3,7 +3,7 @@ Class to manage a Service connection to the local drive.
 """
 
 from mediaman.core import hashenum
-from mediaman.core import service
+from mediaman.services.abstract import service
 from mediaman.services.local import methods
 from mediaman.services.local.models import resultfile, resultfilelist, receiptfile
 

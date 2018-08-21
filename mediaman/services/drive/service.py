@@ -3,7 +3,7 @@ Class to manage a Service connection to Google Drive.
 """
 
 from mediaman.core import hashenum
-from mediaman.core import service
+from mediaman.services.abstract import service
 from mediaman.services.drive import methods
 from mediaman.services.drive.models import resultfile, resultfilelist, receiptfile
 

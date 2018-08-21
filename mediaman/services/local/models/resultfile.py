@@ -1,5 +1,5 @@
 
-from mediaman.core.models import resultfile
+from mediaman.services.abstract.models import resultfile
 
 
 class LocalResultFile(resultfile.AbstractResultFile):

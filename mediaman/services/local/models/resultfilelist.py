@@ -1,5 +1,5 @@
 
-from mediaman.core.models import resultfilelist
+from mediaman.services.abstract.models import resultfilelist
 from mediaman.services.local.models import resultfile
 
 

@@ -1,5 +1,5 @@
 
-from mediaman.core.models import receiptfile
+from mediaman.services.abstract.models import receiptfile
 
 
 class DriveReceiptFile(receiptfile.AbstractReceiptFile):
