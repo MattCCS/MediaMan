@@ -7,4 +7,4 @@ GOOGLE_CLIENT_SECRETS: "credentials/drive/client-secrets/client-secret.json"
 GOOGLE_CREDENTIALS: "credentials/drive/credentials/stored"
 
 # Local
-# LOCAL_DESTINATION:
+LOCAL_DESTINATION: "mediaman"

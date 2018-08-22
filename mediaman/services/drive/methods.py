@@ -58,15 +58,15 @@ def exists(drive, file_id):
         raise exc
 
 
-def put(drive, file_id, file_path):
+def put(drive, source_file_path, destination_file_name):
     media_body = apiclient.http.MediaFileUpload(
-        file_path,
+        source_file_path,
         mimetype="application/octet-stream",  # NOTE: this is optional
         resumable=True
     )
     # The body contains the metadata for the file.
     body = {
-        "title": file_id,
+        "title": destination_file_name,
         "description": "",  # TODO: remove the blank description?
     }
 

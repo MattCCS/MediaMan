@@ -11,7 +11,3 @@ class AbstractResultFile(abc.ABC):
     @abc.abstractmethod
     def name(self):
         raise NotImplementedError()
-
-    @abc.abstractmethod
-    def hash(self):
-        raise NotImplementedError()
