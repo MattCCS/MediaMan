@@ -38,4 +38,6 @@ class EncryptionMiddlewareService(service.AbstractService):
             )
 
     def get(self, file_id):
+        raise NotImplementedError()
+        # TODO: implement decrypt (need file path)
         return self.decrypt(self.service.get(file_id))
