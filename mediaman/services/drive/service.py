@@ -12,6 +12,7 @@ class DriveService(service.AbstractService):
 
     def __init__(self):
         self.drive = None
+        self.folder_id = None
 
     @staticmethod
     def hash_function():
@@ -19,18 +20,24 @@ class DriveService(service.AbstractService):
 
     def authenticate(self):
         self.drive = methods.authenticate()
+        self.folder_id = methods.ensure_directory(self.drive)
 
     def files(self):
         return resultfilelist.DriveResultFileList(
-            methods.files(self.drive)
+            methods.files(self.drive, folder_id=self.folder_id)
         )
 
     def exists(self, file_id):
-        return methods.exists(self.drive, file_id)
+        return methods.exists(self.drive, file_id, folder_id=self.folder_id)
 
     def put(self, source_file_path, destination_file_name):
         return receiptfile.DriveReceiptFile(
-            methods.put(self.drive, source_file_path, destination_file_name)
+            methods.put(
+                self.drive,
+                source_file_path,
+                destination_file_name,
+                folder_id=self.folder_id,
+            )
         )
 
     def get(self, file_id):
