@@ -44,22 +44,12 @@ class DriveService(service.AbstractService):
     def exists(self, file_id):
         return methods.exists(self.drive, file_id, folder_id=self.folder_id)
 
-    def upload(self, source_file_path, destination_file_name):
+    def upload(self, request):
         return models.DriveReceiptFile(
-            methods.upload(
-                self.drive,
-                source_file_path,
-                destination_file_name,
-                folder_id=self.folder_id,
-            )
+            methods.upload(self.drive, request, folder_id=self.folder_id)
         )
 
-    def download(self, source_file_name, destination_file_path):
+    def download(self, request):
         return models.DriveReceiptFile(
-            methods.download(
-                self.drive,
-                source_file_name,
-                destination_file_path,
-                folder_id=self.folder_id,
-            )
+            methods.download(self.drive, request, folder_id=self.folder_id)
         )

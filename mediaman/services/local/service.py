@@ -35,12 +35,12 @@ class LocalService(service.AbstractService):
     def exists(self, file_id):
         return methods.exists(file_id)
 
-    def upload(self, source_file_path, destination_file_name):
+    def upload(self, request):
         return models.LocalReceiptFile(
-            methods.upload(source_file_path, destination_file_name)
+            methods.upload(request)
         )
 
-    def download(self, source_file_name, destination_file_path):
+    def download(self, request):
         return models.LocalReceiptFile(
-            methods.download(source_file_name, destination_file_path)
+            methods.download(request)
         )

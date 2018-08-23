@@ -50,18 +50,12 @@ class CompressionMiddlewareService(service.AbstractService):
     def exists(self, file_id):
         return self.service.exists(file_id)
 
-    def upload(self, source_file_path, destination_file_path):
-        with self.compress(source_file_path) as compressed_tempfile:
-            compressed_file_path = compressed_tempfile.name
-            return self.service.upload(
-                compressed_file_path,
-                destination_file_path,
-            )
+    def upload(self, request):
+        with self.compress(request.path) as compressed_tempfile:
+            request.path = compressed_tempfile.name
+            return self.service.upload(request)
 
-    def download(self, source_file_name, destination_file_path):
+    def download(self, request):
         return self.decompress(
-            self.service.download(
-                source_file_name,
-                destination_file_path,
-            )
+            self.service.download(request)
         )

@@ -35,14 +35,11 @@ class EncryptionMiddlewareService(service.AbstractService):
     def exists(self, file_id):
         return self.service.exists(file_id)
 
-    def upload(self, source_file_path, destination_file_path):
-        with self.encrypt(source_file_path) as encrypted_tempfile:
-            encrypted_file_path = encrypted_tempfile.name
-            return self.service.upload(
-                encrypted_file_path,
-                destination_file_path
-            )
+    def upload(self, request):
+        with self.encrypt(request.path) as encrypted_tempfile:
+            request.path = encrypted_tempfile.name
+            return self.service.upload(request)
 
-    def download(self, source_file_name, destination_file_path):
+    def download(self, request):
         # TODO: implement decrypt (need file path)
         raise NotImplementedError()

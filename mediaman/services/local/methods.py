@@ -51,20 +51,19 @@ def exists(file_id):
     return (destination_path() / file_id).exists()
 
 
-def upload(source_file_path, destination_file_name):
+def upload(request):
     # TODO: check for overwriting?
-    dest = destination_path() / destination_file_name
-    with open(source_file_path, "rb") as infile:
+    dest = destination_path() / request.id
+    with open(request.path, "rb") as infile:
         with open(dest, "wb") as outfile:
             outfile.write(infile.read())
-    return destination_file_name
+    return request.id
 
 
-def download(source_file_name, destination_file_path):
+def download(request):
     # TODO: check for overwriting?
-    source_file_path = destination_path() / source_file_name
+    source_file_path = destination_path() / request.id
     with open(source_file_path, "rb") as infile:
-        with open(destination_file_path, "wb") as outfile:
-            print(source_file_path, destination_file_path)
+        with open(request.path, "wb") as outfile:
             outfile.write(infile.read())
-    return destination_file_path
+    return request.path

@@ -35,11 +35,11 @@ class AbstractService(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def upload(self, source_file_path, destination_file_name):
+    def upload(self, request):
         """Returns an AbstractReceiptFile instance."""
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def download(self, source_file_name, destination_file_path):
+    def download(self, request):
         """Returns an AbstractReceiptFile instance."""
         raise NotImplementedError()
