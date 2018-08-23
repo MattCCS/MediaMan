@@ -44,3 +44,13 @@ class DriveService(service.AbstractService):
                 folder_id=self.folder_id,
             )
         )
+
+    def download(self, source_file_name, destination_file_path):
+        return models.DriveReceiptFile(
+            methods.download(
+                self.drive,
+                source_file_name,
+                destination_file_path,
+                folder_id=self.folder_id,
+            )
+        )

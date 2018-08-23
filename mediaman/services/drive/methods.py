@@ -1,4 +1,6 @@
 
+import io
+
 import apiclient.discovery
 import apiclient.http
 import googleapiclient
@@ -145,6 +147,31 @@ def upload_update(drive, body, media_body, file_id, folder_id=None):
         media_body=media_body,
     ).execute()
     return receipt
+
+
+def download(drive, source_file_name, destination_file_path, folder_id=None):
+    local_fd = io.FileIO(destination_file_path, "wb")
+
+    request = drive.files().get_media(fileId=source_file_name)
+    media_request = apiclient.http.MediaIoBaseDownload(local_fd, request)
+
+    while True:
+        try:
+            (download_progress, done) = media_request.next_chunk()
+        except apiclient.errors.HttpError as error:
+            raise
+
+        if download_progress:
+            print(f"[ ] Downloading... {download_progress.progress():.2%}")
+
+        if done:
+            print("[+] Download complete.")
+            break
+
+    return {
+        "id": source_file_name,
+        "path": destination_file_path,
+    }
 
 
 def list_by_name(drive, file_name, folder_id=None):

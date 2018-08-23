@@ -7,3 +7,4 @@ print(receipt, receipt.id())
 
 print(drive.exists("asdf.dat"))
 print(drive.exists(receipt.id()))
+print(drive.download(receipt.id(), "test.download.txt"))
