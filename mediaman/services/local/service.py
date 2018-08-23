@@ -17,20 +17,25 @@ class LocalService(service.AbstractService):
     def authenticate(self):
         pass
 
-    def files(self):
+    def list_files(self):
         return resultfilelist.LocalResultFileList(
-            methods.files()
+            methods.list_files()
+        )
+
+    def list_file(self, file_id):
+        return resultfile.LocalResultFile(
+            methods.list_file(file_id)
         )
 
     def exists(self, file_id):
         return methods.exists(file_id)
 
-    def put(self, source_file_path, destination_file_name):
+    def upload(self, source_file_path, destination_file_name):
         return receiptfile.LocalReceiptFile(
-            methods.put(source_file_path, destination_file_name)
+            methods.upload(source_file_path, destination_file_name)
         )
 
-    def get(self, file_id):
-        return resultfile.LocalResultFile(
-            methods.get(file_id)
+    def download(self, source_file_name, destination_file_path):
+        return receiptfile.LocalReceiptFile(
+            methods.download(source_file_name, destination_file_path)
         )

@@ -5,6 +5,7 @@ import pathlib
 from mediaman import config
 
 
+# TODO: rename "destination" to "store" or something asymmetrical
 LOCAL_DESTINATION = config.load("LOCAL_DESTINATION")
 
 
@@ -27,18 +28,26 @@ def extractor(path):
     }
 
 
-def files():
+def list_files():
     return map(
         extractor,
         (pathlib.Path(path) for path in glob.glob(f"{destination()}/*"))
     )
 
 
+def list_file(file_id):
+    path = pathlib.Path(destination_path() / file_id)
+    if not path.exists():
+        raise FileNotFoundError()  # TODO: raise custom error
+
+    return extractor(path)
+
+
 def exists(file_id):
     return (destination_path() / file_id).exists()
 
 
-def put(source_file_path, destination_file_name):
+def upload(source_file_path, destination_file_name):
     # TODO: check for overwriting?
     dest = destination_path() / destination_file_name
     with open(source_file_path, "rb") as infile:
@@ -47,9 +56,11 @@ def put(source_file_path, destination_file_name):
     return destination_file_name
 
 
-def get(file_id):
-    path = pathlib.Path(destination_path() / file_id)
-    if not path.exists():
-        raise FileNotFoundError()  # TODO: raise custom error
-
-    return extractor(path)
+def download(source_file_name, destination_file_path):
+    # TODO: check for overwriting?
+    source_file_path = destination_path() / source_file_name
+    with open(source_file_path, "rb") as infile:
+        with open(destination_file_path, "wb") as outfile:
+            print(source_file_path, destination_file_path)
+            outfile.write(infile.read())
+    return destination_file_path

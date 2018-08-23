@@ -22,25 +22,25 @@ class DriveService(service.AbstractService):
         self.drive = methods.authenticate()
         self.folder_id = methods.ensure_directory(self.drive)
 
-    def files(self):
+    def list_files(self):
         return resultfilelist.DriveResultFileList(
-            methods.files(self.drive, folder_id=self.folder_id)
+            methods.list_files(self.drive, folder_id=self.folder_id)
+        )
+
+    def list_file(self, file_id):
+        return resultfile.DriveResultFile(
+            methods.list_file(self.drive, file_id)
         )
 
     def exists(self, file_id):
         return methods.exists(self.drive, file_id, folder_id=self.folder_id)
 
-    def put(self, source_file_path, destination_file_name):
+    def upload(self, source_file_path, destination_file_name):
         return receiptfile.DriveReceiptFile(
-            methods.put(
+            methods.upload(
                 self.drive,
                 source_file_path,
                 destination_file_name,
                 folder_id=self.folder_id,
             )
-        )
-
-    def get(self, file_id):
-        return resultfile.DriveResultFile(
-            methods.get(self.drive, file_id)
         )

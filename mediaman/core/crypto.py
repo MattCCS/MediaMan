@@ -23,21 +23,23 @@ class EncryptionMiddlewareService(service.AbstractService):
     def authenticate(self):
         self.service.authenticate()
 
-    def files(self):
-        return self.service.files()
+    def list_files(self):
+        return self.service.list_files()
+
+    def list_file(self, file_id):
+        return self.service.list_file(file_id)
 
     def exists(self, file_id):
         return self.service.exists(file_id)
 
-    def put(self, source_file_path, destination_file_path):
+    def upload(self, source_file_path, destination_file_path):
         with self.encrypt(source_file_path) as encrypted_tempfile:
             encrypted_file_path = encrypted_tempfile.name
-            return self.service.put(
+            return self.service.upload(
                 encrypted_file_path,
                 destination_file_path
             )
 
-    def get(self, file_id):
-        raise NotImplementedError()
+    def download(self, source_file_name, destination_file_path):
         # TODO: implement decrypt (need file path)
-        return self.decrypt(self.service.get(file_id))
+        raise NotImplementedError()

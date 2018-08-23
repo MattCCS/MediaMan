@@ -78,15 +78,21 @@ def authenticate():
     return service
 
 
-def files(drive, folder_id=None):
+def list_files(drive, folder_id=None):
     if folder_id:
         return drive.children().list(folderId=folder_id).execute()
     return drive.files().list().execute()
 
 
+def list_file(drive, file_id, folder_id=None):
+    if folder_id:
+        return drive.children().get(childId=file_id, folderId=folder_id).execute()
+    return drive.files().get(fileId=file_id).execute()
+
+
 def exists(drive, file_id, folder_id=None):
     try:
-        get(drive, file_id, folder_id=folder_id)
+        list_file(drive, file_id, folder_id=folder_id)
         return True
     except googleapiclient.errors.HttpError as exc:
         if exc.resp["status"] == "404":
@@ -94,7 +100,7 @@ def exists(drive, file_id, folder_id=None):
         raise exc
 
 
-def put(drive, source_file_path, destination_file_name, folder_id=None):
+def upload(drive, source_file_path, destination_file_name, folder_id=None):
     # NOTE:  This method is idempotent.
 
     media_body = apiclient.http.MediaFileUpload(
@@ -117,21 +123,21 @@ def put(drive, source_file_path, destination_file_name, folder_id=None):
 
     if len(files) == 1:
         file_id = files[0]["id"]
-        return put_update(drive, body, media_body, file_id, folder_id=folder_id)
+        return upload_update(drive, body, media_body, file_id, folder_id=folder_id)
 
     if len(files) > 1:
         print("[!] Warning: multiple files exist with this name ({destination_file_name})!  Can't safely replace one!")
 
-    return put_create(drive, body, media_body, folder_id=folder_id)
+    return upload_create(drive, body, media_body, folder_id=folder_id)
 
 
-def put_create(drive, body, media_body, folder_id=None):
+def upload_create(drive, body, media_body, folder_id=None):
     # Perform the request and return the result.
     receipt = drive.files().insert(body=body, media_body=media_body).execute()
     return receipt
 
 
-def put_update(drive, body, media_body, file_id, folder_id=None):
+def upload_update(drive, body, media_body, file_id, folder_id=None):
     receipt = drive.files().update(
         newRevision=False,
         fileId=file_id,
@@ -139,12 +145,6 @@ def put_update(drive, body, media_body, file_id, folder_id=None):
         media_body=media_body,
     ).execute()
     return receipt
-
-
-def get(drive, file_id, folder_id=None):
-    if folder_id:
-        return drive.children().get(childId=file_id, folderId=folder_id).execute()
-    return drive.files().get(fileId=file_id).execute()
 
 
 def list_by_name(drive, file_name, folder_id=None):

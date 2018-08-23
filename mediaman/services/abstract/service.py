@@ -15,8 +15,13 @@ class AbstractService(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def files(self):
+    def list_files(self):
         """Returns an AbstractResultFileList instance."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def list_file(self, file_id):
+        """Returns an AbstractResultFile instance."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -25,11 +30,11 @@ class AbstractService(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def put(self, source_file_path, destination_file_name):
+    def upload(self, source_file_path, destination_file_name):
         """Returns an AbstractReceiptFile instance."""
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def get(self, file_id):
-        """Returns an AbstractResultFile instance."""
+    def download(self, source_file_name, destination_file_path):
+        """Returns an AbstractReceiptFile instance."""
         raise NotImplementedError()
