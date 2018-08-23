@@ -43,6 +43,10 @@ def list_file(file_id):
     return extractor(path)
 
 
+def search_by_name(file_name):
+    return (data for data in list_files() if data["name"] == file_name)
+
+
 def exists(file_id):
     return (destination_path() / file_id).exists()
 

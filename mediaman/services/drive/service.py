@@ -32,6 +32,15 @@ class DriveService(service.AbstractService):
             methods.list_file(self.drive, file_id)
         )
 
+    def search_by_name(self, file_name):
+        return models.DriveResultFileList(
+            methods.search_by_name(
+                self.drive,
+                file_name,
+                folder_id=self.folder_id,
+            )
+        )
+
     def exists(self, file_id):
         return methods.exists(self.drive, file_id, folder_id=self.folder_id)
 

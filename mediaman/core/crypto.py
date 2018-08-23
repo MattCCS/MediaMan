@@ -29,6 +29,9 @@ class EncryptionMiddlewareService(service.AbstractService):
     def list_file(self, file_id):
         return self.service.list_file(file_id)
 
+    def search_by_name(self, file_name):
+        return self.service.search_by_name(file_name)
+
     def exists(self, file_id):
         return self.service.exists(file_id)
 

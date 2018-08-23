@@ -25,6 +25,11 @@ class AbstractService(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def search_by_name(self, file_name):
+        """Returns an AbstractResultFileList instance."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def exists(self, file_id):
         """Returns a boolean."""
         raise NotImplementedError()

@@ -121,7 +121,7 @@ def upload(drive, source_file_path, destination_file_name, folder_id=None):
         body["parents"] = [{"id": folder_id}]
 
     # Decide whether to create or update.
-    files = list_by_name(drive, destination_file_name, folder_id=folder_id)
+    files = search_by_name(drive, destination_file_name, folder_id=folder_id)["items"]
 
     if len(files) == 1:
         file_id = files[0]["id"]
@@ -174,7 +174,7 @@ def download(drive, source_file_name, destination_file_path, folder_id=None):
     }
 
 
-def list_by_name(drive, file_name, folder_id=None):
+def search_by_name(drive, file_name, folder_id=None):
     if folder_id:
         request = drive.children().list(
             folderId=folder_id,
@@ -187,5 +187,5 @@ def list_by_name(drive, file_name, folder_id=None):
             fields="items(id)",
         )
 
-    files = request.execute()["items"]
+    files = request.execute()
     return files

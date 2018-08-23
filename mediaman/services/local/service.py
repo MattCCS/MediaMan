@@ -27,6 +27,11 @@ class LocalService(service.AbstractService):
             methods.list_file(file_id)
         )
 
+    def search_by_name(self, file_name):
+        return models.LocalResultFileList(
+            methods.search_by_name(file_name)
+        )
+
     def exists(self, file_id):
         return methods.exists(file_id)
 
