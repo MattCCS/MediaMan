@@ -1,21 +1,36 @@
 
+import shutil
 import tempfile
+import zlib
 
 from mediaman.services.abstract import service
 
 
-class EncryptionMiddlewareService(service.AbstractService):
+class CompressionMiddlewareService(service.AbstractService):
 
     def __init__(self, service):
         self.service = service
 
-    def encrypt(self, file_path):
+    def compress(self, file_path):
         tempfile_ref = tempfile.NamedTemporaryFile(mode="wb+")
         with open(file_path, "rb") as infile:
-            # TODO: encrypt
-            tempfile_ref.write(b"ENCRYPT:" + infile.read())
+            tempfile_ref.write(zlib.compress(infile.read(), level=9))
             tempfile_ref.seek(0)
         return tempfile_ref
+
+    def decompress(self, receipt):
+        file_path = receipt.id()
+
+        # decompress to tempfile
+        tempfile_ref = tempfile.NamedTemporaryFile(mode="wb+", delete=False)
+        with open(file_path, "rb") as infile:
+            tempfile_ref.write(zlib.decompress(infile.read()))
+
+        # replace original file
+        decompressed_file_path = tempfile_ref.name
+        shutil.move(decompressed_file_path, file_path)
+
+        return receipt
 
     def hash_function(self):
         return self.service.hash_function()
@@ -36,10 +51,11 @@ class EncryptionMiddlewareService(service.AbstractService):
         return self.service.exists(file_id)
 
     def upload(self, request):
-        with self.encrypt(request.path) as encrypted_tempfile:
-            request.path = encrypted_tempfile.name
+        with self.compress(request.path) as compressed_tempfile:
+            request.path = compressed_tempfile.name
             return self.service.upload(request)
 
     def download(self, request):
-        # TODO: implement decrypt (need file path)
-        raise NotImplementedError()
+        return self.decompress(
+            self.service.download(request)
+        )

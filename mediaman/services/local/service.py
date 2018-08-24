@@ -5,7 +5,7 @@ Class to manage a Service connection to the local drive.
 from mediaman.core import hashenum
 from mediaman.services.abstract import service
 from mediaman.services.local import methods
-from mediaman.services.local.models import resultfile, resultfilelist, receiptfile
+from mediaman.services.local import models
 
 
 class LocalService(service.AbstractService):
@@ -17,20 +17,30 @@ class LocalService(service.AbstractService):
     def authenticate(self):
         pass
 
-    def files(self):
-        return resultfilelist.LocalResultFileList(
-            methods.files()
+    def list_files(self):
+        return models.LocalResultFileList(
+            methods.list_files()
+        )
+
+    def list_file(self, file_id):
+        return models.LocalResultFile(
+            methods.list_file(file_id)
+        )
+
+    def search_by_name(self, file_name):
+        return models.LocalResultFileList(
+            methods.search_by_name(file_name)
         )
 
     def exists(self, file_id):
         return methods.exists(file_id)
 
-    def put(self, source_file_path, destination_file_name):
-        return receiptfile.LocalReceiptFile(
-            methods.put(source_file_path, destination_file_name)
+    def upload(self, request):
+        return models.LocalReceiptFile(
+            methods.upload(request)
         )
 
-    def get(self, file_id):
-        return resultfile.LocalResultFile(
-            methods.get(file_id)
+    def download(self, request):
+        return models.LocalReceiptFile(
+            methods.download(request)
         )

@@ -1,4 +1,6 @@
 
+import io
+
 import apiclient.discovery
 import apiclient.http
 import googleapiclient
@@ -78,15 +80,22 @@ def authenticate():
     return service
 
 
-def files(drive, folder_id=None):
+def list_files(drive, folder_id=None):
+    # NOTE: any children() call to Drive returns Child objects, without names!
     if folder_id:
         return drive.children().list(folderId=folder_id).execute()
     return drive.files().list().execute()
 
 
+def list_file(drive, file_id, folder_id=None):
+    if folder_id:
+        return drive.children().get(childId=file_id, folderId=folder_id).execute()
+    return drive.files().get(fileId=file_id).execute()
+
+
 def exists(drive, file_id, folder_id=None):
     try:
-        get(drive, file_id, folder_id=folder_id)
+        list_file(drive, file_id, folder_id=folder_id)
         return True
     except googleapiclient.errors.HttpError as exc:
         if exc.resp["status"] == "404":
@@ -94,18 +103,18 @@ def exists(drive, file_id, folder_id=None):
         raise exc
 
 
-def put(drive, source_file_path, destination_file_name, folder_id=None):
-    # NOTE:  This method is idempotent.
+def upload(drive, request, folder_id=None):
+    # NOTE:  This method is idempotent iff no files are already duplicated.
 
     media_body = apiclient.http.MediaFileUpload(
-        source_file_path,
+        request.path,
         mimetype="application/octet-stream",  # NOTE: this is optional
         resumable=True,
     )
 
     # The body contains the metadata for the file.
     body = {
-        "title": destination_file_name,
+        "title": request.id,
         "description": "",  # TODO: remove the blank description?
     }
 
@@ -113,25 +122,25 @@ def put(drive, source_file_path, destination_file_name, folder_id=None):
         body["parents"] = [{"id": folder_id}]
 
     # Decide whether to create or update.
-    files = list_by_name(drive, destination_file_name, folder_id=folder_id)
+    files = search_by_name(drive, request.id, folder_id=folder_id)["items"]
 
     if len(files) == 1:
         file_id = files[0]["id"]
-        return put_update(drive, body, media_body, file_id, folder_id=folder_id)
+        return upload_update(drive, body, media_body, file_id, folder_id=folder_id)
 
     if len(files) > 1:
-        print("[!] Warning: multiple files exist with this name ({destination_file_name})!  Can't safely replace one!")
+        print("[!] Warning: multiple files exist with this name ({request.id})!  Can't safely replace one!")
 
-    return put_create(drive, body, media_body, folder_id=folder_id)
+    return upload_create(drive, body, media_body, folder_id=folder_id)
 
 
-def put_create(drive, body, media_body, folder_id=None):
+def upload_create(drive, body, media_body, folder_id=None):
     # Perform the request and return the result.
     receipt = drive.files().insert(body=body, media_body=media_body).execute()
     return receipt
 
 
-def put_update(drive, body, media_body, file_id, folder_id=None):
+def upload_update(drive, body, media_body, file_id, folder_id=None):
     receipt = drive.files().update(
         newRevision=False,
         fileId=file_id,
@@ -141,13 +150,32 @@ def put_update(drive, body, media_body, file_id, folder_id=None):
     return receipt
 
 
-def get(drive, file_id, folder_id=None):
-    if folder_id:
-        return drive.children().get(childId=file_id, folderId=folder_id).execute()
-    return drive.files().get(fileId=file_id).execute()
+def download(drive, request, folder_id=None):
+    local_fd = io.FileIO(request.path, "wb")
+
+    http_request = drive.files().get_media(fileId=request.id)
+    media_request = apiclient.http.MediaIoBaseDownload(local_fd, http_request)
+
+    while True:
+        try:
+            (download_progress, done) = media_request.next_chunk()
+        except apiclient.errors.HttpError as error:
+            raise
+
+        if download_progress:
+            print(f"[ ] Downloading... {download_progress.progress():.2%}")
+
+        if done:
+            print("[+] Download complete.")
+            break
+
+    return {
+        "id": request.id,
+        "path": request.path,
+    }
 
 
-def list_by_name(drive, file_name, folder_id=None):
+def search_by_name(drive, file_name, folder_id=None):
     if folder_id:
         request = drive.children().list(
             folderId=folder_id,
@@ -160,5 +188,5 @@ def list_by_name(drive, file_name, folder_id=None):
             fields="items(id)",
         )
 
-    files = request.execute()["items"]
+    files = request.execute()
     return files
