@@ -52,4 +52,4 @@ class DriveResultFileList(models.AbstractResultFileList):
         # self.self_link = file_list_data.get("selfLink", "")
 
     def results(self):
-        return self.items.values()
+        return list(self.items.values())
