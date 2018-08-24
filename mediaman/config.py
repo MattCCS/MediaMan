@@ -3,7 +3,8 @@ import os
 import yaml
 
 
-CONFIGURATION_PATH = os.environ.get("CONFIG", None)
+DEFAULT_CONFIGURATION_PATH = "config.yaml"
+CONFIGURATION_PATH = os.environ.get("CONFIG", DEFAULT_CONFIGURATION_PATH)
 CONFIGURATION = None
 
 

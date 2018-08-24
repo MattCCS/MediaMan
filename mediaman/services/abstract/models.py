@@ -8,6 +8,9 @@ class AbstractReceiptFile(abc.ABC):
     def id(self):
         raise NotImplementedError()
 
+    def __repr__(self):
+        return f"ReceiptFile({self.id()})"
+
 
 class AbstractResultFile(abc.ABC):
 
@@ -19,9 +22,15 @@ class AbstractResultFile(abc.ABC):
     def name(self):
         raise NotImplementedError()
 
+    def __repr__(self):
+        return f"{type(self)}({self.id()}, {self.name()})"
+
 
 class AbstractResultFileList(abc.ABC):
 
     @abc.abstractmethod
     def results(self):
         raise NotImplementedError()
+
+    def __repr__(self):
+        return f"{type(self)}({self.results()})"
