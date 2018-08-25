@@ -121,6 +121,8 @@ class IndexManager:
         self.update_metadata()
 
     def download(self, identifier):
+        print(identifier)
+
         if identifier in self.id_to_metadata_map:
             metadata = self.list_file(identifier)
             request = models.Request(
@@ -166,5 +168,7 @@ class Client:
     def upload(self, file_path):
         return self.index_manager.upload(file_path)
 
-    def download(self, identifier):
+    def download(self, file_path):
+        path = pathlib.Path(file_path)
+        identifier = path.name
         return self.index_manager.download(identifier)
