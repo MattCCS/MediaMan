@@ -7,6 +7,26 @@ from mediaman import config
 from mediaman.core import client
 from mediaman.services import loader
 
+SHORT_DESCRIPTION = """\
+MediaMan is a simple but robust file archiving tool.
+
+Pass the help flag (-h or --help) for more info."""
+
+DESCRIPTION = """\
+MediaMan is a tool to manage the backup of files and data to arbitrary services
+(such as Google Drive, Dropbox, external drives, etc.) with a consistent
+interface and user experience."""
+
+LOCAL_DESCRIPTION = """\
+[local] -- Allows you to back up files to a network share, external drive,
+or even a directory on your local drive (if that's what you're into).
+Configurable in the config.yaml file."""
+
+DRIVE_DESCRIPTION = """\
+[drive] -- Allows you to back up files to Google Drive (requires Drive credentials).
+Can even back up to a specific folder within Google Drive.
+Configurable in the config.yaml file."""
+
 LIST_TEXT_MM = "List all files indexed by MediaMan"
 HAS_TEXT_MM = "Check whether MediaMan has the given file(s)"
 GET_TEXT_MM = "Get the given file(s)"
@@ -47,7 +67,7 @@ def parse_args():
 
 
 def parse_args_command():
-    parser = argparse.ArgumentParser(description="MediaMan!")
+    parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(help="command", dest="action")
 
     add_global_commands(subparsers)
@@ -55,18 +75,27 @@ def parse_args_command():
 
 
 def parse_args_subcommand():
-    parser = argparse.ArgumentParser(description="MediaMan!")
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
     subparsers = parser.add_subparsers(help="Backup service options", dest="service")
 
-    subparsers_list = []
-    subparsers_list.append(subparsers.add_parser("local", help="The local filesystem"))
-    subparsers_list.append(subparsers.add_parser("drive", help="Google drive"))
-    for subparser in subparsers_list:
+    subparsers_map = {
+        "local": subparsers.add_parser("local", help="The local filesystem", description=LOCAL_DESCRIPTION),
+        "drive": subparsers.add_parser("drive", help="Google drive", description=DRIVE_DESCRIPTION),
+    }
+
+    for subparser in subparsers_map.values():
         subsubparsers = subparser.add_subparsers(help="command", dest="action")
         add_service_commands(subsubparsers)
 
     add_global_commands(subparsers)
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    if hasattr(args, "action") and not args.action:
+        subparser = subparsers_map[args.service]
+        subparser.print_help()
+        exit()
+
+    return args
 
 
 def add_global_commands(subparsers):
@@ -90,7 +119,7 @@ def add_service_commands(subparsers):
 
 def main():
     args = parse_args()
-    print(args)
+    # print(args)
 
     root = config.load("SAVED_PWD")
     if root is None:
@@ -99,7 +128,8 @@ def main():
         root = pathlib.Path(root)
 
     if not args.action:
-        raise NotImplementedError()
+        print(SHORT_DESCRIPTION)
+        return
 
     if not hasattr(args, "service"):
         raise NotImplementedError()
