@@ -117,23 +117,11 @@ def add_service_commands(subparsers):
     subparsers.add_parser("cap")
 
 
-def main():
-    args = parse_args()
-    # print(args)
+def run_global(root, args):
+    raise NotImplementedError()
 
-    root = config.load("SAVED_PWD")
-    if root is None:
-        root = pathlib.Path(".")
-    else:
-        root = pathlib.Path(root)
 
-    if not args.action:
-        print(SHORT_DESCRIPTION)
-        return
-
-    if not hasattr(args, "service"):
-        raise NotImplementedError()
-
+def run_service(root, args):
     service = loader.load(args.service)
     c = client.Client(service)
 
@@ -156,7 +144,25 @@ def main():
     else:
         raise NotImplementedError()
 
-    # import code; code.interact(local=locals())
+
+def main():
+    args = parse_args()
+    # print(args)
+
+    root = config.load("SAVED_PWD")
+    if root is None:
+        root = pathlib.Path(".")
+    else:
+        root = pathlib.Path(root)
+
+    if not args.action:
+        print(SHORT_DESCRIPTION)
+        return
+
+    if not hasattr(args, "service"):
+        return run_global(root, args)
+    else:
+        return run_service(root, args)
 
 
 if __name__ == '__main__':

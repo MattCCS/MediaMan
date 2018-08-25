@@ -7,9 +7,12 @@
     - JSON file for service listing
 
 - Commands:
+    - del: Delete file
     - sync: Synchronize services with each other
     - stat: Show service status + latency
     - use: Show service quota usage
+
+- Add tagging to files for search/filtering
 
 - Control over syncing rules?  YAML file?  Allow/require user to set quotas?
 
@@ -18,6 +21,8 @@
 - Unicode isn't handled by well `list`
 
 ## Development
+- Separate out id conversion from metadata?
+- Remove hash function from classes
 - Table presentation of file list
 - Support `get` to specific directory/filename
 - Implement encryption (optional)
