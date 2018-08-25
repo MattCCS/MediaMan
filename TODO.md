@@ -22,7 +22,6 @@
 
 ## Development
 - Separate out id conversion from metadata?
-- Remove hash function from classes
 - Table presentation of file list
 - Support `get` to specific directory/filename
 - Implement encryption (optional)

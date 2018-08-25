@@ -1,5 +1,4 @@
 
-from mediaman.core import hashenum
 from mediaman.services.drive import service as driveservice
 from mediaman.services.local import service as localservice
 
@@ -14,7 +13,6 @@ def load(name):
 
 
 def prepare(service):
-    assert service.hash_function() in hashenum.HashFunctions
     service.authenticate()
     return service
 

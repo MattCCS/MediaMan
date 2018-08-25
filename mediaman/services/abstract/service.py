@@ -4,11 +4,6 @@ import abc
 
 class AbstractService(abc.ABC):
 
-    @abc.abstractstaticmethod
-    def hash_function(self):
-        """Returns the hash function used by the service."""
-        raise NotImplementedError()
-
     @abc.abstractmethod
     def authenticate(self):
         """Authenticates with the service, if necessary.  Returns None."""

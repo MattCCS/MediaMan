@@ -17,9 +17,6 @@ class EncryptionMiddlewareService(service.AbstractService):
             tempfile_ref.seek(0)
         return tempfile_ref
 
-    def hash_function(self):
-        return self.service.hash_function()
-
     def authenticate(self):
         self.service.authenticate()
 
