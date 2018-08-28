@@ -14,4 +14,3 @@ cd "$DIR"
 
 . bin/activate
 SAVED_PWD=$SAVED_PWD python3.6 -Bm mediaman.core.api "$@"
-# TODO: pass $SAVED_PWD

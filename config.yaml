@@ -8,4 +8,4 @@ GOOGLE_CREDENTIALS: "credentials/drive/credentials/stored"
 GOOGLE_DESTINATION: "MediaMan"
 
 # Local
-LOCAL_DESTINATION: "mediaman"
+LOCAL_DESTINATION: "local-storage"

@@ -37,4 +37,4 @@ class LocalResultFileList(models.AbstractResultFileList):
         self.items = {d["name"]: LocalResultFile(d) for d in file_list_data}
 
     def results(self):
-        return self.items.values()
+        return list(self.items.values())

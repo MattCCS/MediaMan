@@ -159,6 +159,9 @@ class Client:
     def list_file(self, file_id):
         return self.index_manager.list_file(file_id)
 
+    def has_by_uuid(self, identifier):
+        return self.index_manager.has_by_uuid(identifier)
+
     def search_by_name(self, file_name):
         return list(self.index_manager.search_by_name(file_name))
 

@@ -1,10 +1,10 @@
 
 import argparse
-import json
 import pathlib
 
 from mediaman import config
 from mediaman.core import client
+from mediaman.core import methods
 from mediaman.services import loader
 
 SHORT_DESCRIPTION = """\
@@ -117,34 +117,6 @@ def add_service_commands(subparsers):
     subparsers.add_parser("cap")
 
 
-def run_global(root, args):
-    raise NotImplementedError()
-
-
-def run_service(root, args):
-    service = loader.load(args.service)
-    c = client.Client(service)
-
-    action = args.action
-    if action == "list":
-        print(json.dumps(c.list_files(), indent=4))
-
-    elif action == "put":
-        file_paths = args.files
-        # TODO: async/thread (failsafe)
-        for file_path in file_paths:
-            print(c.upload(root / file_path))
-
-    elif action == "get":
-        file_paths = args.files
-        # TODO: async/thread (failsafe)
-        for file_path in file_paths:
-            print(c.download(root / file_path))
-
-    else:
-        raise NotImplementedError()
-
-
 def main():
     args = parse_args()
     # print(args)
@@ -160,9 +132,14 @@ def main():
         return
 
     if not hasattr(args, "service"):
-        return run_global(root, args)
+        services = loader.load_all()
+        # TODO: single (multi-)client object wrapper
+        clients = [client.Client(service) for service in services]
+        return methods.run_global(root, args, clients)
     else:
-        return run_service(root, args)
+        service = loader.load(args.service)
+        client_ = client.Client(service)
+        return methods.run_service(root, args, client_)
 
 
 if __name__ == '__main__':
