@@ -3,6 +3,7 @@ import collections
 import json
 
 from mediaman.core import validation
+from mediaman.core import watertable
 
 
 def run_global(root, args, clients):
@@ -21,11 +22,25 @@ def run_global_list(root, args, clients):
         metadata_map[client] = client.list_files()
 
     file_map = collections.defaultdict(list)
-    for file_list in metadata_map.values():
+    for (client, file_list) in metadata_map.items():
         for file in file_list:
+            file["client"] = client
             file_map[file["hash"]].append(file)
 
-    return file_map
+    def copy_gen():
+        nonlocal file_map
+        for (hash, files) in file_map.items():
+            for f in files:
+                yield (hash, f["name"], f["id"], f["sid"])
+                hash = ""
+
+    columns = (("hash", 20), ("name", 50), ("id", 24), ("sid", 24))
+    iterable = copy_gen()
+    gen = watertable.table_stream(columns, iterable)
+    for row in gen:
+        print(row)
+
+    return
 
 
 def run_service(root, args, client):

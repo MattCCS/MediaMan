@@ -69,7 +69,7 @@ class IndexManager:
             self.id_to_metadata_map = {v["id"]: k for (k, v) in self.metadata.items()}
             self.hash_to_metadata_map = {v["hash"]: k for (k, v) in self.metadata.items()}
 
-        print(self.metadata)
+        # print(self.metadata)
 
     def new_id(self):
         id = str(uuid.uuid4())

@@ -2,6 +2,10 @@
 A stream-friendly text table generator.
 """
 
+import unicodedata
+
+EAST_ASIAN_DOUBLE_WIDE_CODES = {"F", "W"}
+
 
 CORNER = "+"
 PIPE = "|"
@@ -14,7 +18,12 @@ __all__ = ["table_stream"]
 
 
 def cell(text, width, pad=1, cutoff="..."):
+    # TODO: truncate text to width
+    # BUG: full-width east asian codes aren't handled properly
     text = str(text)
+    extra = sum(unicodedata.east_asian_width(c) in EAST_ASIAN_DOUBLE_WIDE_CODES for c in text)
+    width -= extra
+
     if len(text) > width:
         out = (text[:width - len(cutoff)] + cutoff)[:width]
     else:
