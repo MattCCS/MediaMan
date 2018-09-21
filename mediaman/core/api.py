@@ -7,6 +7,8 @@ from mediaman.core import client
 from mediaman.core import methods
 from mediaman.services import loader
 
+COMMAND_NAME = "mm"
+
 SHORT_DESCRIPTION = """\
 MediaMan is a simple but robust file archiving tool.
 
@@ -75,7 +77,7 @@ def parse_args_command():
 
 
 def parse_args_subcommand():
-    parser = argparse.ArgumentParser(description=DESCRIPTION)
+    parser = argparse.ArgumentParser(prog=COMMAND_NAME, description=DESCRIPTION)
     subparsers = parser.add_subparsers(help="Backup service options", dest="service")
 
     subparsers_map = {
