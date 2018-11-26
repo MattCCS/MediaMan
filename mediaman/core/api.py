@@ -29,6 +29,10 @@ DRIVE_DESCRIPTION = """\
 Can even back up to a specific folder within Google Drive.
 Configurable in the config.yaml file."""
 
+ALL_DESCRIPTION = """\
+[all] -- Allows you to back up files to all configured services at once.
+Will also report information about all configured services."""
+
 LIST_TEXT_MM = "List all files indexed by MediaMan"
 HAS_TEXT_MM = "Check whether MediaMan has the given file(s)"
 GET_TEXT_MM = "Get the given file(s)"
@@ -83,6 +87,7 @@ def parse_args_subcommand():
     subparsers_map = {
         "local": subparsers.add_parser("local", help="The local filesystem", description=LOCAL_DESCRIPTION),
         "drive": subparsers.add_parser("drive", help="Google drive", description=DRIVE_DESCRIPTION),
+        "all": subparsers.add_parser("all", help="(All configured services at once)", description=ALL_DESCRIPTION),
     }
 
     for subparser in subparsers_map.values():
