@@ -13,4 +13,4 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 cd "$DIR"
 
 . bin/activate
-SAVED_PWD=$SAVED_PWD python3.6 -Bm mediaman.core.api "$@"
+SAVED_PWD=$SAVED_PWD python3.6 -Bm mediaman.interfaces.cli "$@"
