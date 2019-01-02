@@ -126,11 +126,7 @@ def main():
     args = parse_args()
     # print(args)
 
-    root = config.load("SAVED_PWD")
-    if root is None:
-        root = pathlib.Path(".")
-    else:
-        root = pathlib.Path(root)
+    root = pathlib.Path(config.load("SAVED_PWD", default="."))
 
     if not args.action:
         print(SHORT_DESCRIPTION)

@@ -20,11 +20,11 @@ def ensure_configuration():
         reload_configuration()
 
 
-def load(key):
+def load(key, default=None):
     """
     Loads the given key from the preset configuration YAML file.
     Falls back to os.environ if no results found.
-    Returns None if key not present.
+    Returns `default` (default None) if key not present.
     """
     ensure_configuration()
-    return CONFIGURATION.get(key, os.environ.get(key, None))
+    return CONFIGURATION.get(key, os.environ.get(key, default))
