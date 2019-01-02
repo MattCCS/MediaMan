@@ -1,6 +1,7 @@
 
-import asyncio
+import concurrent.futures
 import random
+import time
 
 
 class Multiclient:
@@ -14,14 +15,14 @@ class Multiclient:
     # def list_files(self):
     #     return list(self.index_manager.list_files())
 
-    async def list_file(self, file_id):
-        futures = [client.list_file(file_id) for client in self.clients]
-        for f in asyncio.as_completed(futures):
-            try:
-                result = await f
-                return result
-            except Exception as exc:
-                print(type(exc))
+    def list_file(self, file_id):
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [executor.submit(client.list_file, file_id) for client in self.clients]
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    return future.result()
+                except Exception as exc:
+                    print(type(exc))
 
     # def has_by_uuid(self, identifier):
     #     return self.index_manager.has_by_uuid(identifier)
@@ -29,8 +30,16 @@ class Multiclient:
     # def search_by_name(self, file_name):
     #     return list(self.index_manager.search_by_name(file_name))
 
-    # def exists(self, file_id):
-    #     return self.index_manager.exists(file_id)
+    def exists(self, file_id):
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [executor.submit(client.exists, file_id) for client in self.clients]
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    if future.result() is True:
+                        return True
+                except Exception as exc:
+                    print(type(exc))
+            return False
 
     # def upload(self, file_path):
     #     return self.index_manager.upload(file_path)
@@ -42,20 +51,20 @@ class Multiclient:
 
 
 class Client1:
-    async def list_file(self, file_id):
-        await asyncio.sleep(random.random())
+    def list_file(self, file_id):
+        time.sleep(random.random())
         if random.randint(0, 1):
             raise FloatingPointError()
         return 1
 
 
 class Client2:
-    async def list_file(self, file_id):
-        await asyncio.sleep(random.random())
+    def list_file(self, file_id):
+        time.sleep(random.random())
         return 2
 
 
 m = Multiclient([Client1(), Client2()])
 # loop = asyncio.get_event_loop()
 # loop.wait(m.list_file('x'))
-print(asyncio.run(m.list_file('x')))
+print(m.list_file('x'))
