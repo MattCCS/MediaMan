@@ -31,15 +31,7 @@ class Multiclient:
     #     return list(self.index_manager.search_by_name(file_name))
 
     def exists(self, file_id):
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [executor.submit(client.exists, file_id) for client in self.clients]
-            for future in concurrent.futures.as_completed(futures):
-                try:
-                    if future.result() is True:
-                        return True
-                except Exception as exc:
-                    print(type(exc))
-            return False
+        raise NotImplementedError()
 
     # def upload(self, file_path):
     #     return self.index_manager.upload(file_path)
