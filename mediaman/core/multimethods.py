@@ -1,14 +1,30 @@
+"""
+"""
 
 import concurrent.futures
+from typing import List
+
+from mediaman.core import logtools
+from mediaman.core import models
+
+logger = logtools.new_logger("mediaman.core.multimethods")
 
 
-def exists(clients, file_id):
+def multi_apply(clients, func, *args, **kwargs):
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = [executor.submit(client.exists, file_id) for client in clients]
+        futures = {executor.submit(func(client), *args, **kwargs): client for client in clients}
         for future in concurrent.futures.as_completed(futures):
+            client = futures[future]
             try:
-                if future.result() is True:
-                    return True
+                yield models.MultiResponse(client, future.result(), None)
             except Exception as exc:
-                print(type(exc))
-        return False
+                logger.error(f"[!] Client {repr(client)} threw error: {repr(exc)}", exc_info=True)
+                yield models.MultiResponse(client, None, exc)
+
+
+def exists(clients, file_id) -> List[models.MultiResponse]:
+    yield from multi_apply(clients, lambda c: c.exists, file_id)
+
+
+def search_by_name(clients, file_name) -> List[models.MultiResponse]:
+    yield from multi_apply(clients, lambda c: c.search_by_name, file_name)

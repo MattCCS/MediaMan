@@ -1,5 +1,6 @@
 
 import io
+import logging
 
 import apiclient.discovery
 import apiclient.http
@@ -9,6 +10,13 @@ import oauth2client.client
 import oauth2client.file
 
 from mediaman import config
+from mediaman.core import logtools
+
+logger = logtools.new_logger("mediaman.services.drive.methods")
+
+# This suppresses warnings from googleapiclient, and
+# prevents it from polluting the log files.
+logging.getLogger("googleapiclient.discovery_cache").setLevel(logging.ERROR)
 
 
 OAUTH2_SCOPE = "https://www.googleapis.com/auth/drive"
@@ -20,11 +28,11 @@ DESTINATION = config.load("GOOGLE_DESTINATION")
 
 
 def ensure_directory(drive):
-    print("[ ] Ensuring Google Drive destination...")
+    logger.debug("[ ] Ensuring Google Drive destination...")
 
     if not DESTINATION:
         # TODO: use logging library
-        print("[+] No directory specified.  Using top-level directory.")
+        logger.debug("[+] No directory specified.  Using top-level directory.")
         return None
 
     folders = drive.files().list(
@@ -35,7 +43,7 @@ def ensure_directory(drive):
     if folders:
         assert len(folders) == 1
         folder_id = folders[0]["id"]
-        print(f"[+] Directory found ({folder_id}).")
+        logger.debug(f"[+] Directory found ({folder_id}).")
         return folder_id
 
     metadata = {
@@ -47,7 +55,7 @@ def ensure_directory(drive):
         fields='id',
     ).execute()
     folder_id = folder["id"]
-    print(f"[+] Directory created ({folder_id}).")
+    logger.debug(f"[+] Directory created ({folder_id}).")
 
     return folder["id"]
 
@@ -129,7 +137,7 @@ def upload(drive, request, folder_id=None):
         return upload_update(drive, body, media_body, file_id, folder_id=folder_id)
 
     if len(files) > 1:
-        print("[!] Warning: multiple files exist with this name ({request.id})!  Can't safely replace one!")
+        logger.warning("[!] Warning: multiple files exist with this name ({request.id})!  Can't safely replace one!")
 
     return upload_create(drive, body, media_body, folder_id=folder_id)
 
@@ -163,10 +171,10 @@ def download(drive, request, folder_id=None):
             raise
 
         if download_progress:
-            print(f"[ ] Downloading... {download_progress.progress():.2%}")
+            logger.info(f"[ ] Downloading... {download_progress.progress():.2%}")
 
         if done:
-            print("[+] Download complete.")
+            logger.info("[+] Download complete.")
             break
 
     return {

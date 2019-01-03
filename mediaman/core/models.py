@@ -21,3 +21,25 @@ class Request:
     @path.setter
     def path(self, value):
         self._path = value
+
+
+class MultiResponse:
+    def __init__(self, client, response, exception: Exception):
+        self._client = client
+        self._response = response
+        self._exception = exception
+
+    @property
+    def client(self):
+        return self._client
+
+    @property
+    def response(self):
+        return self._response
+
+    @property
+    def exception(self):
+        return self._exception
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({repr(self.client)}, {repr(self.response)}, {repr(self.exception)})"

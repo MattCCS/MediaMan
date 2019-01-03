@@ -1,7 +1,16 @@
 
 import abc
+import functools
 
 from mediaman.services.abstract import models
+
+
+def auth(func):
+    @functools.wraps(func)
+    def wrapped(self, *args, **kwargs):
+        self.authenticate()
+        return func(self, *args, **kwargs)
+    return wrapped
 
 
 class AbstractService(abc.ABC):

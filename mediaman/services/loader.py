@@ -16,16 +16,11 @@ def load_all():
     ]
 
 
-def prepare(service):
-    service.authenticate()
-    return service
-
-
 def load_drive():
     from mediaman.services.drive import service as driveservice
-    return prepare(driveservice.DriveService())
+    return driveservice.DriveService()
 
 
 def load_local():
     from mediaman.services.local import service as localservice
-    return prepare(localservice.LocalService())
+    return localservice.LocalService()

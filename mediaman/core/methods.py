@@ -45,10 +45,7 @@ def run_global_list(root, args, clients):
 
 def run_service(root, args, client):
     action = args.action
-    if action == "list":
-        print(json.dumps(client.list_files(), indent=4))
-
-    elif action == "has":
+    if action == "has":
         return run_service_has(root, args, client)
 
     elif action == "put":
@@ -75,15 +72,37 @@ def run_service_has(root, args, client):
 
 def run_service_has_one(root, args, client):
     name = args.files[0]
-    raise NotImplementedError()
+    # raise NotImplementedError()
 
     if validation.is_valid_uuid(name):
         return client.has_by_uuid(name)
     elif validation.is_valid_sha256(name):
         return client.has_by_hash(name)
     else:
-        return client.has(name)
+        return client.search_by_name(name)
 
 
 def run_service_has_many(root, args, client):
     raise NotImplementedError()
+
+
+def run_multi_has(client, root, *files):
+    if len(files) == 1:
+        return run_multi_has_one(client, root, files[0])
+    else:
+        raise NotImplementedError()
+
+
+def run_multi_has_one(client, root, file):
+    return client.search_by_name(file)
+
+
+# def run_multi_get(client, root, *files):
+#     if len(files) == 1:
+#         return run_multi_get_one(client, root, files[0])
+#     else:
+#         raise NotImplementedError()
+
+
+# def run_multi_get_one(client, root, file):
+#     return client.get(file)

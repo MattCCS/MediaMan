@@ -4,6 +4,8 @@ import pathlib
 
 from mediaman import config
 from mediaman.core import api
+from mediaman.core import logtools
+from mediaman.core import watertable
 
 COMMAND_NAME = "mm"
 
@@ -72,6 +74,7 @@ def parse_args():
 
 def parse_args_command():
     parser = argparse.ArgumentParser()
+    logtools.add_log_parser(parser)
     subparsers = parser.add_subparsers(help="command", dest="action")
 
     add_global_commands(subparsers)
@@ -80,6 +83,7 @@ def parse_args_command():
 
 def parse_args_subcommand():
     parser = argparse.ArgumentParser(prog=COMMAND_NAME, description=DESCRIPTION)
+    logtools.add_log_parser(parser)
     subparsers = parser.add_subparsers(help="Backup service options", dest="service")
 
     subparsers_map = {
@@ -89,6 +93,7 @@ def parse_args_subcommand():
     }
 
     for subparser in subparsers_map.values():
+        logtools.add_log_parser(subparser)
         subsubparsers = subparser.add_subparsers(help="command", dest="action")
         add_service_commands(subsubparsers)
 
@@ -133,11 +138,31 @@ def main():
         return
 
     if not hasattr(args, "service"):
-        return api.run_global(root, args)
-    elif args.service == "all":
-        return api.run_multi(root, args)
+        service_name = None
     else:
-        return api.run_single(root, args)
+        service_name = args.service
+
+    # return api.run_global(root, args)
+    if args.action == "list":
+        print(repr(api.run_list(service_name=service_name)))
+    elif args.action == "has":
+        results = api.run_search(root, *args.files, service_name=service_name)
+        if service_name == "all":
+            columns = (("service", 16),) + tuple((file_name, len(file_name)) for file_name in args.files)
+            it = ((result.client.name(), (' ' if not result.response else str(len(result.response)))) for result in results)
+            gen = watertable.table_stream(columns, it)
+            for row in gen:
+                print(row)
+        else:
+            print(repr(results))
+    elif args.action == "get":
+        results = api.run_get(root, *args.files, service_name=service_name)
+        print(repr(results))
+    elif args.action == "put":
+        results = api.run_put(root, *args.files, service_name=service_name)
+        print(repr(results))
+    else:
+        raise NotImplementedError()
 
 
 if __name__ == '__main__':
