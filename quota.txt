@@ -1,0 +1,32 @@
+Traceback (most recent call last):
+  File "/usr/local/Cellar/python/3.6.4_3/Frameworks/Python.framework/Versions/3.6/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/usr/local/Cellar/python/3.6.4_3/Frameworks/Python.framework/Versions/3.6/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/Users/mattcotton/Repos/MediaMan/mediaman/core/api.py", line 148, in <module>
+    main()
+  File "/Users/mattcotton/Repos/MediaMan/mediaman/core/api.py", line 144, in main
+    return methods.run_service(root, args, client_)
+  File "/Users/mattcotton/Repos/MediaMan/mediaman/core/methods.py", line 58, in run_service
+    print(client.upload(root / file_path))
+  File "/Users/mattcotton/Repos/MediaMan/mediaman/core/client.py", line 172, in upload
+    return self.index_manager.upload(file_path)
+  File "/Users/mattcotton/Repos/MediaMan/mediaman/core/client.py", line 105, in upload
+    receipt = self.service.upload(request)
+  File "/Users/mattcotton/Repos/MediaMan/mediaman/services/drive/service.py", line 44, in upload
+    methods.upload(self.drive, request, folder_id=self.folder_id)
+  File "/Users/mattcotton/Repos/MediaMan/mediaman/services/drive/methods.py", line 134, in upload
+    return upload_create(drive, body, media_body, folder_id=folder_id)
+  File "/Users/mattcotton/Repos/MediaMan/mediaman/services/drive/methods.py", line 139, in upload_create
+    receipt = drive.files().insert(body=body, media_body=media_body).execute()
+  File "/Users/mattcotton/Repos/MediaMan/lib/python3.6/site-packages/googleapiclient/_helpers.py", line 130, in positional_wrapper
+    return wrapped(*args, **kwargs)
+  File "/Users/mattcotton/Repos/MediaMan/lib/python3.6/site-packages/googleapiclient/http.py", line 811, in execute
+    _, body = self.next_chunk(http=http, num_retries=num_retries)
+  File "/Users/mattcotton/Repos/MediaMan/lib/python3.6/site-packages/googleapiclient/_helpers.py", line 130, in positional_wrapper
+    return wrapped(*args, **kwargs)
+  File "/Users/mattcotton/Repos/MediaMan/lib/python3.6/site-packages/googleapiclient/http.py", line 979, in next_chunk
+    return self._process_response(resp, content)
+  File "/Users/mattcotton/Repos/MediaMan/lib/python3.6/site-packages/googleapiclient/http.py", line 1010, in _process_response
+    raise HttpError(resp, content, uri=self.uri)
+googleapiclient.errors.HttpError: <HttpError 403 when requesting https://www.googleapis.com/upload/drive/v2/files?alt=json&uploadType=resumable returned "The user has exceeded their Drive storage quota">

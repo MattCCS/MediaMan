@@ -32,9 +32,6 @@ class CompressionMiddlewareService(service.AbstractService):
 
         return receipt
 
-    def hash_function(self):
-        return self.service.hash_function()
-
     def authenticate(self):
         self.service.authenticate()
 

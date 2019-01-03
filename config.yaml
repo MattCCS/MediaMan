@@ -8,4 +8,19 @@ GOOGLE_CREDENTIALS: "credentials/drive/credentials/stored"
 GOOGLE_DESTINATION: "MediaMan"
 
 # Local
-LOCAL_DESTINATION: "mediaman"
+LOCAL_DESTINATION: "local-storage"
+
+# service configs
+services:
+  local1:
+    destination: "/Volumes/ExternalDrive/me"
+  local2:
+    destination: "/Network/some-share/me"
+
+resolution-order:
+  - local1
+  - local2
+  - drive
+
+cost:
+  - aws

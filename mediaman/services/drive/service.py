@@ -2,7 +2,6 @@
 Class to manage a Service connection to Google Drive.
 """
 
-from mediaman.core import hashenum
 from mediaman.services.abstract import service
 from mediaman.services.drive import methods
 from mediaman.services.drive import models
@@ -13,10 +12,6 @@ class DriveService(service.AbstractService):
     def __init__(self):
         self.drive = None
         self.folder_id = None
-
-    @staticmethod
-    def hash_function():
-        return hashenum.HashFunctions.MD5
 
     def authenticate(self):
         self.drive = methods.authenticate()
