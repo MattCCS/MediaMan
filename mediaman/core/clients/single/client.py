@@ -2,28 +2,23 @@
 import pathlib
 
 from mediaman.core import index
+from mediaman.core.clients.single import abstract
 
 
-class Client:
+class SingleClient(abstract.AbstractSingleClient):
 
     def __init__(self, service):
-        self.service = service
+        super().__init__(service)
         self.index = index.Index(self.service)
 
     def name(self):
         return self.service.__class__.__name__
-
-    def get_file_by_hash(self, file_hash):
-        return self.index.get_file_by_hash(file_hash)
 
     def list_files(self):
         return list(self.index.list_files())
 
     def list_file(self, file_id):
         return self.index.list_file(file_id)
-
-    def has_by_uuid(self, identifier):
-        return self.index.has_by_uuid(identifier)
 
     def search_by_name(self, file_name):
         return list(self.index.search_by_name(file_name))
@@ -39,5 +34,8 @@ class Client:
         identifier = path.name
         return [self.index.download(identifier)]
 
-    def __repr__(self):
-        return f"{self.__class__.__name__}({repr(self.service)})"
+    def get_file_by_hash(self, file_hash):
+        return self.index.get_file_by_hash(file_hash)
+
+    def has_by_uuid(self, identifier):
+        return self.index.has_by_uuid(identifier)

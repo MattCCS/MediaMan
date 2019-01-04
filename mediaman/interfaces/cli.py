@@ -37,16 +37,19 @@ LIST_TEXT_MM = "List all files indexed by MediaMan"
 HAS_TEXT_MM = "Check whether MediaMan has the given file(s)"
 GET_TEXT_MM = "Get the given file(s)"
 PUT_TEXT_MM = "Back up the given file(s)"
+SEARCH_TEXT_MM = "Search MediaMan for the given filename(s)"
 
 LIST_TEXT_GLOBAL = "List all files indexed across all services"
 HAS_TEXT_GLOBAL = "Check which services have the given file(s)"
 GET_TEXT_GLOBAL = "Get the given file(s) from whichever service"
 PUT_TEXT_GLOBAL = "Back up the given file(s) to all services"
+SEARCH_TEXT_GLOBAL = "Search all services for the given filename(s)"
 
 LIST_TEXT_SERVICE = "List the files indexed in this service"
 HAS_TEXT_SERVICE = "Check whether this service has the given file(s)"
 GET_TEXT_SERVICE = "Get the given file(s) from this service"
 PUT_TEXT_SERVICE = "Back up the given file(s) to this service"
+SEARCH_TEXT_SERVICE = "Search this service for the given filename(s)"
 
 
 # def parse_args():
@@ -114,6 +117,7 @@ def add_global_commands(subparsers):
     subparsers.add_parser("has", description=HAS_TEXT_GLOBAL).add_argument("files", nargs="+")
     subparsers.add_parser("get", description=GET_TEXT_GLOBAL).add_argument("files", nargs="+")
     subparsers.add_parser("put", description=PUT_TEXT_GLOBAL).add_argument("files", nargs="+")
+    subparsers.add_parser("search", description=SEARCH_TEXT_GLOBAL).add_argument("files", nargs="+")
     subparsers.add_parser("stat")
     subparsers.add_parser("cap")
 
@@ -123,6 +127,7 @@ def add_service_commands(subparsers):
     subparsers.add_parser("has", help=HAS_TEXT_SERVICE, description=HAS_TEXT_SERVICE).add_argument("files", nargs="+")
     subparsers.add_parser("get", help=GET_TEXT_SERVICE, description=GET_TEXT_SERVICE).add_argument("files", nargs="+")
     subparsers.add_parser("put", help=PUT_TEXT_SERVICE, description=PUT_TEXT_SERVICE).add_argument("files", nargs="+")
+    subparsers.add_parser("search", help=SEARCH_TEXT_SERVICE, description=SEARCH_TEXT_SERVICE).add_argument("files", nargs="+")
     subparsers.add_parser("stat")
     subparsers.add_parser("cap")
 
@@ -142,7 +147,6 @@ def main():
     else:
         service_name = args.service
 
-    # return api.run_global(root, args)
     if args.action == "list":
         results = api.run_list(service_name=service_name)
         if service_name == "all":
@@ -177,6 +181,12 @@ def main():
     elif args.action == "put":
         results = api.run_put(root, *args.files, service_name=service_name)
         print(repr(results))
+    elif args.action == "search":
+        results = api.run_search(root, *args.files, service_name=service_name)
+        total = 0
+        for (total, result) in enumerate(results, 1):
+            print(result)
+        print(f"{total} results found.")
     else:
         raise NotImplementedError()
 

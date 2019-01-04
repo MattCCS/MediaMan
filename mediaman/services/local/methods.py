@@ -44,7 +44,8 @@ def list_file(file_id):
 
 
 def search_by_name(file_name):
-    return (data for data in list_files() if data["name"] == file_name)
+    out = (data for data in list_files() if data["name"] == file_name)
+    return out
 
 
 def exists(file_id):

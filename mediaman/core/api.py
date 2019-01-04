@@ -2,10 +2,10 @@
 Universal API to interact with MediaMan
 """
 
-from mediaman.core import client
-from mediaman.core import multiclient
-from mediaman.core import methods
 from mediaman.services import loader
+from mediaman.core.clients.single import client as singleclient
+from mediaman.core.clients.multi import multiclient
+from mediaman.core.clients.multi import globalmulticlient
 
 __all__ = [
     "run_list",
@@ -14,15 +14,15 @@ __all__ = [
 
 def load_single_client(service_name):
     service = loader.load(service_name)
-    return client.Client(service)
+    return singleclient.SingleClient(service)
 
 
 def load_multi_client():
-    return multiclient.Multiclient([client.Client(service) for service in loader.load_all()])
+    return multiclient.Multiclient([singleclient.SingleClient(service) for service in loader.load_all()])
 
 
 def load_global_client():
-    raise NotImplementedError()
+    return globalmulticlient.GlobalMulticlient([singleclient.SingleClient(service) for service in loader.load_all()])
 
 
 def load_client(service_name=None):
@@ -32,19 +32,6 @@ def load_client(service_name=None):
         return load_multi_client()
     else:
         return load_single_client(service_name)
-
-
-def run_global(root, args):
-    services = loader.load_all()
-    # TODO: single (multi-)client object wrapper
-    clients = [client.Client(service) for service in services]
-    return methods.run_global(root, args, clients)
-
-
-def run_single(root, args):
-    service = loader.load(args.service)
-    client_ = client.Client(service)
-    return methods.run_service(root, args, client_)
 
 
 def run_list(service_name=None):
