@@ -10,8 +10,8 @@ class Multiclient:
     # def get_file_by_hash(self, file_hash):
     #     return self.index_manager.get_file_by_hash(file_hash)
 
-    # def list_files(self):
-    #     return list(self.index_manager.list_files())
+    def list_files(self):
+        return multimethods.list_files(self.clients)
 
     def list_file(self, file_id):
         raise NotImplementedError()
@@ -20,10 +20,10 @@ class Multiclient:
     #     return self.index_manager.has_by_uuid(identifier)
 
     def search_by_name(self, file_name):
-        yield from multimethods.search_by_name(self.clients, file_name)
+        return multimethods.search_by_name(self.clients, file_name)
 
     def exists(self, file_id):
-        yield from multimethods.exists(self.clients, file_id)
+        return multimethods.exists(self.clients, file_id)
 
     # def upload(self, file_path):
     #     return self.index_manager.upload(file_path)

@@ -2,7 +2,7 @@
 """
 
 import concurrent.futures
-from typing import List
+from typing import Iterable
 
 from mediaman.core import logtools
 from mediaman.core import models
@@ -22,9 +22,13 @@ def multi_apply(clients, func, *args, **kwargs):
                 yield models.MultiResponse(client, None, exc)
 
 
-def exists(clients, file_id) -> List[models.MultiResponse]:
+def list_files(clients) -> Iterable[models.MultiResponse]:
+    yield from multi_apply(clients, lambda c: c.list_files)
+
+
+def exists(clients, file_id) -> Iterable[models.MultiResponse]:
     yield from multi_apply(clients, lambda c: c.exists, file_id)
 
 
-def search_by_name(clients, file_name) -> List[models.MultiResponse]:
+def search_by_name(clients, file_name) -> Iterable[models.MultiResponse]:
     yield from multi_apply(clients, lambda c: c.search_by_name, file_name)

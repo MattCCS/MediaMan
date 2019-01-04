@@ -144,7 +144,23 @@ def main():
 
     # return api.run_global(root, args)
     if args.action == "list":
-        print(repr(api.run_list(service_name=service_name)))
+        results = api.run_list(service_name=service_name)
+        if service_name == "all":
+            columns = (("service", 16), ("name", 40), ("hash", 64), ("id", 36))
+            # it = ((result.client.name(), (' ' if not result.response else str(len(result.response)))) for result in results)
+            # it = (() for result in results for row in result.response)
+
+            def it(results):
+                for result in results:
+                    if result.response:
+                        for item in result.response:
+                            yield (result.client.name(), item["name"], item["hash"], item["id"])
+
+            gen = watertable.table_stream(columns, it(results))
+            for row in gen:
+                print(row)
+        else:
+            print(repr(results))
     elif args.action == "has":
         results = api.run_search(root, *args.files, service_name=service_name)
         if service_name == "all":
