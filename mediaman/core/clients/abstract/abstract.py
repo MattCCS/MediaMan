@@ -21,6 +21,11 @@ class AbstractClient(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def fuzzy_search_by_name(self, file_name) -> models.AbstractResultFileList:
+        """List all files with a name similar to the given name."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def exists(self, file_id) -> bool:
         """Return whether a file with that ID exists."""
         raise NotImplementedError()

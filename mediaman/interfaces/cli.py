@@ -50,6 +50,7 @@ HAS_TEXT_SERVICE = "Check whether this service has the given file(s)"
 GET_TEXT_SERVICE = "Get the given file(s) from this service"
 PUT_TEXT_SERVICE = "Back up the given file(s) to this service"
 SEARCH_TEXT_SERVICE = "Search this service for the given filename(s)"
+FUZZY_TEXT_SERVICE = "Search this service for similar filename(s)"
 
 
 # def parse_args():
@@ -128,6 +129,7 @@ def add_service_commands(subparsers):
     subparsers.add_parser("get", help=GET_TEXT_SERVICE, description=GET_TEXT_SERVICE).add_argument("files", nargs="+")
     subparsers.add_parser("put", help=PUT_TEXT_SERVICE, description=PUT_TEXT_SERVICE).add_argument("files", nargs="+")
     subparsers.add_parser("search", help=SEARCH_TEXT_SERVICE, description=SEARCH_TEXT_SERVICE).add_argument("files", nargs="+")
+    subparsers.add_parser("fuzzy", help=FUZZY_TEXT_SERVICE, description=SEARCH_TEXT_SERVICE).add_argument("files", nargs="+")
     subparsers.add_parser("stat")
     subparsers.add_parser("cap")
 
@@ -187,6 +189,23 @@ def main():
         for (total, result) in enumerate(results, 1):
             print(result)
         print(f"{total} results found.")
+    elif args.action == "fuzzy":
+        results = api.run_fuzzy(root, *args.files, service_name=service_name)
+        if service_name != "all":
+            columns = (("name", 60), ("hash", 64), ("id", 36))
+
+            def it(results):
+                for item in results:
+                    yield (item["name"], item["hash"], item["id"])
+
+            gen = watertable.table_stream(columns, it(results))
+            for row in gen:
+                print(row)
+        else:
+            total = 0
+            for (total, result) in enumerate(results, 1):
+                print(result)
+            print(f"{total} results found.")
     else:
         raise NotImplementedError()
 

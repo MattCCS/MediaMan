@@ -69,3 +69,7 @@ def exists(clients, file_id) -> Iterable[models.MultiResponse]:
 
 def search_by_name(clients, file_name) -> Iterable[models.MultiResponse]:
     return multi_apply(clients, "search_by_name", file_name)
+
+
+def fuzzy_search_by_name(clients, file_name) -> Iterable[models.MultiResponse]:
+    return multi_apply(clients, "fuzzy_search_by_name", file_name)

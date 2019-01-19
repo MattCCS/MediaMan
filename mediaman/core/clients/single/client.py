@@ -23,6 +23,9 @@ class SingleClient(abstract.AbstractSingleClient):
     def search_by_name(self, file_name):
         return list(self.index.search_by_name(file_name))
 
+    def fuzzy_search_by_name(self, file_name):
+        return list(self.index.fuzzy_search_by_name(file_name))
+
     def exists(self, file_id):
         return self.index.exists(file_id)
 

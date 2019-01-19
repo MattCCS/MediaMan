@@ -52,3 +52,7 @@ def run_put(root, *file_names, service_name=None):
 
 def run_search(root, *file_names, service_name=None):
     return load_client(service_name=service_name).search_by_name(*file_names)
+
+
+def run_fuzzy(root, *file_names, service_name=None):
+    return load_client(service_name=service_name).fuzzy_search_by_name(*file_names)
