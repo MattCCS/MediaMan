@@ -42,3 +42,6 @@ class SingleClient(abstract.AbstractSingleClient):
 
     def has_by_uuid(self, identifier):
         return self.index.has_by_uuid(identifier)
+
+    def capacity(self):
+        return self.service.capacity()

@@ -198,3 +198,7 @@ def search_by_name(drive, file_name, folder_id=None):
 
     files = request.execute()
     return files
+
+
+def capacity(drive, folder_id=None):
+    return drive.about().get().execute()

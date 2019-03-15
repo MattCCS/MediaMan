@@ -49,3 +49,8 @@ class AbstractService(abc.ABC):
     def download(self, request) -> models.AbstractReceiptFile:
         """Download the file(s) described by the given request."""
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def capacity(self) -> models.AbstractResultQuota:
+        """Return quota information for this service."""
+        raise NotImplementedError()

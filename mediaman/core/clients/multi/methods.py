@@ -73,3 +73,7 @@ def search_by_name(clients, file_name) -> Iterable[models.MultiResponse]:
 
 def fuzzy_search_by_name(clients, file_name) -> Iterable[models.MultiResponse]:
     return multi_apply(clients, "fuzzy_search_by_name", file_name)
+
+
+def capacity(clients) -> Iterable[models.MultiResponse]:
+    return multi_apply(clients, "capacity")

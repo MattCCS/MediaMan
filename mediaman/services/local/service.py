@@ -39,3 +39,6 @@ class LocalService(service.AbstractService):
         return models.LocalReceiptFile(
             methods.download(request)
         )
+
+    def capacity(self):
+        raise NotImplementedError()

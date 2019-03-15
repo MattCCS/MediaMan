@@ -176,7 +176,8 @@ def main():
             for row in gen:
                 print(row)
         else:
-            print(repr(results))
+            for row in results:
+                print(row)
     elif args.action == "get":
         results = api.run_get(root, *args.files, service_name=service_name)
         print(repr(results))
@@ -206,6 +207,12 @@ def main():
             for (total, result) in enumerate(results, 1):
                 print(result)
             print(f"{total} results found.")
+    elif args.action == "cap":
+        results = api.run_cap(service_name=service_name)
+        if service_name != "all":
+            results = [results]
+        for result in results:
+            print(result)
     else:
         raise NotImplementedError()
 

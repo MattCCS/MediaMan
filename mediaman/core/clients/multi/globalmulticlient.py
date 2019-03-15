@@ -27,6 +27,9 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
     def search_by_name(self, file_name):
         return gen_first_valid(methods.search_by_name(self.clients, file_name))
 
+    def fuzzy_search_by_name(self, file_name):
+        raise NotImplementedError()
+
     def exists(self, file_id):
         raise NotImplementedError()
 
@@ -40,4 +43,7 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
         raise NotImplementedError()
 
     def has_by_uuid(self, identifier):
+        raise NotImplementedError()
+
+    def capacity(self):
         raise NotImplementedError()

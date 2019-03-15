@@ -58,3 +58,9 @@ class DriveService(service.AbstractService):
         return models.DriveReceiptFile(
             methods.download(self.drive, request, folder_id=self.folder_id)
         )
+
+    @service.auth
+    def capacity(self):
+        return models.DriveResultQuota(
+            methods.capacity(self.drive)
+        )
