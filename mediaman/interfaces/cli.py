@@ -176,8 +176,15 @@ def main():
             for row in gen:
                 print(row)
         else:
-            for row in results:
-                print(row)
+            results = list(results)
+            if results:
+                for row in results:
+                    print(row)
+            else:
+                s = 's' if (len(args.files) > 1) else ''
+                were = 'were' if (len(args.files) > 1) else 'was'
+                print(f"[-] No file{s} with the name{s} {args.files} {were} found.")
+                exit(1)
     elif args.action == "get":
         results = api.run_get(root, *args.files, service_name=service_name)
         print(repr(results))
