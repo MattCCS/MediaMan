@@ -11,9 +11,6 @@ class SingleClient(abstract.AbstractSingleClient):
         super().__init__(service)
         self.index = index.Index(self.service)
 
-    def name(self):
-        return self.service.__class__.__name__
-
     def list_files(self):
         return list(self.index.list_files())
 
