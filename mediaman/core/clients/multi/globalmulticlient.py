@@ -39,11 +39,5 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
     def download(self, file_path):
         raise NotImplementedError()
 
-    def get_file_by_hash(self, file_hash):
-        raise NotImplementedError()
-
-    def has_by_uuid(self, identifier):
-        raise NotImplementedError()
-
     def capacity(self):
         raise NotImplementedError()

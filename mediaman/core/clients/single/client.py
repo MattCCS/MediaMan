@@ -1,15 +1,10 @@
 
 import pathlib
 
-from mediaman.core import index
 from mediaman.core.clients.single import abstract
 
 
 class SingleClient(abstract.AbstractSingleClient):
-
-    def __init__(self, service):
-        super().__init__(service)
-        self.index = index.Index(self.service)
 
     def list_files(self):
         return list(self.index.list_files())
@@ -33,12 +28,6 @@ class SingleClient(abstract.AbstractSingleClient):
         path = pathlib.Path(file_path)
         identifier = path.name
         return [self.index.download(identifier)]
-
-    def get_file_by_hash(self, file_hash):
-        return self.index.get_file_by_hash(file_hash)
-
-    def has_by_uuid(self, identifier):
-        return self.index.has_by_uuid(identifier)
 
     def capacity(self):
         return self.service.capacity()

@@ -1,8 +1,6 @@
 
-from mediaman.core.clients.single import simple
+from mediaman.core.clients.abstract import abstract
 
 
-class SimpleMiddleware(simple.SimpleSingleClient):
-
-    def __init__(self, service):
-        super().__init__(service)
+class SimpleMiddleware(abstract.AbstractClient):
+    pass

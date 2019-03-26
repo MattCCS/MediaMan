@@ -16,6 +16,9 @@ def gen_all(gen):
 
 class Multiclient(abstract.AbstractMulticlient):
 
+    def name(self):
+        return self.__class__.__name__
+
     def list_files(self):
         return gen_all(methods.list_files(self.clients))
 
@@ -26,7 +29,7 @@ class Multiclient(abstract.AbstractMulticlient):
         return gen_all(methods.search_by_name(self.clients, file_name))
 
     def fuzzy_search_by_name(self, file_name):
-        raise NotImplementedError()
+        return gen_all(methods.fuzzy_search_by_name(self.clients, file_name))
 
     def exists(self, file_id):
         return gen_all(methods.exists(self.clients, file_id))
@@ -35,12 +38,6 @@ class Multiclient(abstract.AbstractMulticlient):
         raise NotImplementedError()
 
     def download(self, file_path):
-        raise NotImplementedError()
-
-    def get_file_by_hash(self, file_hash):
-        raise NotImplementedError()
-
-    def has_by_uuid(self, identifier):
         raise NotImplementedError()
 
     def capacity(self):

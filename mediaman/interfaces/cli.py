@@ -145,13 +145,13 @@ def main():
         return
 
     if not hasattr(args, "service"):
-        service_name = None
+        service_selector = None
     else:
-        service_name = args.service
+        service_selector = args.service
 
     if args.action == "list":
-        results = api.run_list(service_name=service_name)
-        if service_name == "all":
+        results = api.run_list(service_selector=service_selector)
+        if service_selector == "all":
             columns = (("service", 16), ("name", 40), ("hash", 64), ("id", 36))
             # it = ((result.client.name(), (' ' if not result.response else str(len(result.response)))) for result in results)
             # it = (() for result in results for row in result.response)
@@ -168,8 +168,8 @@ def main():
         else:
             print(repr(results))
     elif args.action == "has":
-        results = api.run_search(root, *args.files, service_name=service_name)
-        if service_name == "all":
+        results = api.run_search(root, *args.files, service_selector=service_selector)
+        if service_selector == "all":
             columns = (("service", 16),) + tuple((file_name, len(file_name)) for file_name in args.files)
             it = ((result.client.name(), (' ' if not result.response else str(len(result.response)))) for result in results)
             gen = watertable.table_stream(columns, it)
@@ -186,20 +186,20 @@ def main():
                 print(f"[-] No file{s} with the name{s} {args.files} {were} found.")
                 exit(1)
     elif args.action == "get":
-        results = api.run_get(root, *args.files, service_name=service_name)
+        results = api.run_get(root, *args.files, service_selector=service_selector)
         print(repr(results))
     elif args.action == "put":
-        results = api.run_put(root, *args.files, service_name=service_name)
+        results = api.run_put(root, *args.files, service_selector=service_selector)
         print(repr(results))
     elif args.action == "search":
-        results = api.run_search(root, *args.files, service_name=service_name)
+        results = api.run_search(root, *args.files, service_selector=service_selector)
         total = 0
         for (total, result) in enumerate(results, 1):
             print(result)
         print(f"{total} results found.")
     elif args.action == "fuzzy":
-        results = api.run_fuzzy(root, *args.files, service_name=service_name)
-        if service_name != "all":
+        results = api.run_fuzzy(root, *args.files, service_selector=service_selector)
+        if service_selector != "all":
             columns = (("name", 60), ("hash", 64), ("id", 36))
 
             def it(results):
@@ -215,8 +215,8 @@ def main():
                 print(result)
             print(f"{total} results found.")
     elif args.action == "cap":
-        results = api.run_cap(service_name=service_name)
-        if service_name != "all":
+        results = api.run_cap(service_selector=service_selector)
+        if service_selector != "all":
             results = [results]
         for result in results:
             print(result)

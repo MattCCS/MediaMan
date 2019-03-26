@@ -7,6 +7,7 @@ import uuid
 
 from mediaman.core import hashing
 from mediaman.core import models
+from mediaman.core.index import base
 
 
 ERROR_MULTIPLE_REMOTE_INDICES = "\
@@ -22,12 +23,12 @@ def init(func):
     return wrapped
 
 
-class Index:
+class Index(base.BaseIndex):
 
     INDEX_FILENAME = "index"
 
     def __init__(self, service):
-        self.service = service
+        super().__init__(service)
 
         self.index_id = None
         self.metadata = {}
