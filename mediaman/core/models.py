@@ -23,7 +23,7 @@ class Request:
         self._path = value
 
 
-class MultiResponse:
+class Response:
     def __init__(self, client, response, exception: Exception):
         self._client = client
         self._response = response
@@ -42,4 +42,4 @@ class MultiResponse:
         return self._exception
 
     def __repr__(self):
-        return f"{self.name()}({repr(self.client)}, {repr(self.response)}, {repr(self.exception)})"
+        return f"{self.__class__.__name__}({repr(self.client)}, {repr(self.response)}, {repr(self.exception)})"

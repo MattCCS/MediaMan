@@ -25,19 +25,19 @@ def multi_apply_concurrent(clients, func_name, *args, **kwargs):
             print(future)
             client = futures[future]
             try:
-                yield models.MultiResponse(client, future.result(), None)
+                yield models.Response(client, future.result(), None)
             except Exception as exc:
                 logger.error(f"[!] Client {repr(client)} threw error: {repr(exc)}", exc_info=True)
-                yield models.MultiResponse(client, None, exc)
+                yield models.Response(client, None, exc)
 
 
 def call(q, client, func_name, args, kwargs):
     try:
         result = getattr(client, func_name)(*args, **kwargs)
-        out = models.MultiResponse(client, result, None)
+        out = models.Response(client, result, None)
     except Exception as exc:
         logger.error(f"[!] Client {client} threw error: {repr(exc)}", exc_info=True)
-        out = models.MultiResponse(client, None, exc)
+        out = models.Response(client, None, exc)
 
     q.put(out)
 
@@ -59,21 +59,21 @@ def multi_apply(clients, func_name, *args, **kwargs):
             return
 
 
-def list_files(clients) -> Iterable[models.MultiResponse]:
+def list_files(clients) -> Iterable[models.Response]:
     return multi_apply(clients, "list_files")
 
 
-def exists(clients, file_id) -> Iterable[models.MultiResponse]:
+def exists(clients, file_id) -> Iterable[models.Response]:
     return multi_apply(clients, "exists", file_id)
 
 
-def search_by_name(clients, file_name) -> Iterable[models.MultiResponse]:
+def search_by_name(clients, file_name) -> Iterable[models.Response]:
     return multi_apply(clients, "search_by_name", file_name)
 
 
-def fuzzy_search_by_name(clients, file_name) -> Iterable[models.MultiResponse]:
+def fuzzy_search_by_name(clients, file_name) -> Iterable[models.Response]:
     return multi_apply(clients, "fuzzy_search_by_name", file_name)
 
 
-def capacity(clients) -> Iterable[models.MultiResponse]:
+def capacity(clients) -> Iterable[models.Response]:
     return multi_apply(clients, "capacity")

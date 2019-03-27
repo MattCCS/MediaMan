@@ -16,9 +16,6 @@ def gen_all(gen):
 
 class Multiclient(abstract.AbstractMulticlient):
 
-    def name(self):
-        return self.__class__.__name__
-
     def list_files(self):
         return gen_all(methods.list_files(self.clients))
 

@@ -16,10 +16,24 @@ def gen_first_valid(gen):
         pass
 
 
+def gen_all(gen):
+    try:
+        result = next(gen)
+        yield result
+        while True:
+            result = gen.send(True)
+            yield result
+    except StopIteration:
+        pass
+
+
 class GlobalMulticlient(abstract.AbstractMulticlient):
 
     def list_files(self):
-        raise NotImplementedError()
+        results = gen_all(methods.list_files(self.clients))
+        flat_results = [result for response in [result.response for result in results] for result in response]
+        deduped_results = {r["hash"]: r for r in flat_results}
+        return [{"id": r["id"], "name": r["name"], "hash": r["hash"]} for r in deduped_results.values()]
 
     def list_file(self, file_id):
         raise NotImplementedError()

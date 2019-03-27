@@ -149,24 +149,28 @@ def main():
     else:
         service_selector = args.service
 
+    all_mode = service_selector == "all"
+
     if args.action == "list":
         results = api.run_list(service_selector=service_selector)
-        if service_selector == "all":
-            columns = (("service", 16), ("name", 40), ("hash", 64), ("id", 36))
-            # it = ((result.client.name(), (' ' if not result.response else str(len(result.response)))) for result in results)
-            # it = (() for result in results for row in result.response)
+        columns = ((("service", 16),) if all_mode else ()) + (("name", 40 + (0 if all_mode else 12)), ("hash", 64), ("id", 36))
+        # it = ((result.client.name(), (' ' if not result.response else str(len(result.response)))) for result in results)
+        # it = (() for result in results for row in result.response)
 
-            def it(results):
+        def it(results):
+            nonlocal all_mode
+            if not all_mode:
+                for item in results:
+                    yield (item["name"], item["hash"], item["id"])
+            else:
                 for result in results:
                     if result.response:
                         for item in result.response:
                             yield (result.client.name(), item["name"], item["hash"], item["id"])
 
-            gen = watertable.table_stream(columns, it(results))
-            for row in gen:
-                print(row)
-        else:
-            print(repr(results))
+        gen = watertable.table_stream(columns, it(results))
+        for row in gen:
+            print(row)
     elif args.action == "has":
         results = api.run_search(root, *args.files, service_selector=service_selector)
         if service_selector == "all":
