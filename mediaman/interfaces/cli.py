@@ -172,7 +172,7 @@ def main():
         for row in gen:
             print(row)
     elif args.action == "has":
-        results = api.run_search(root, *args.files, service_selector=service_selector)
+        results = api.run_has(root, *args.files, service_selector=service_selector)
         if service_selector == "all":
             columns = (("service", 16),) + tuple((file_name, len(file_name)) for file_name in args.files)
             it = ((result.client.name(), (' ' if not result.response else str(len(result.response)))) for result in results)
@@ -180,15 +180,14 @@ def main():
             for row in gen:
                 print(row)
         else:
-            results = list(results)
-            if results:
-                for row in results:
-                    print(row)
-            else:
-                s = 's' if (len(args.files) > 1) else ''
-                were = 'were' if (len(args.files) > 1) else 'was'
-                print(f"[-] No file{s} with the name{s} {args.files} {were} found.")
-                exit(1)
+            print(results)
+            # if results:
+            #     print(results)
+            # else:
+            #     s = 's' if (len(args.files) > 1) else ''
+            #     were = 'were' if (len(args.files) > 1) else 'was'
+            #     print(f"[-] No file{s} with the name{s} {args.files} {were} found.")
+            #     exit(1)
     elif args.action == "get":
         results = api.run_get(root, *args.files, service_selector=service_selector)
         print(repr(results))
