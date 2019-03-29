@@ -6,9 +6,11 @@
 GOOGLE_CLIENT_SECRETS: "credentials/drive/client-secrets/client-secret.json"
 GOOGLE_CREDENTIALS: "credentials/drive/credentials/stored"
 GOOGLE_DESTINATION: "MediaMan"
+GOOGLE_QUOTA: 90GB
 
 # Local
 LOCAL_DESTINATION: "local-storage"
+LOCAL_QUOTA: 20GB
 
 # service configs
 services:

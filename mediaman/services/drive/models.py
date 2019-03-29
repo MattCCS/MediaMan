@@ -58,12 +58,16 @@ class DriveResultFileList(models.AbstractResultFileList):
 class DriveResultQuota(models.AbstractResultQuota):
 
     def __init__(self, quota_data):
-        self.quota_bytes_used = int(quota_data.get("quotaBytesUsed"))
-        self.quota_bytes_total = int(quota_data.get("quotaBytesTotal"))
-        self.quota_bytes_used_in_trash = int(quota_data.get("quotaBytesUsedInTrash"))
+        self._used = quota_data["used"]
+        self._quota = quota_data["quota"]
+        self._total = quota_data["total"]
+        self._trashed = quota_data["trashed"]
 
     def used(self):
-        return self.quota_bytes_used
+        return self._used
+
+    def quota(self):
+        return self._quota
 
     def total(self):
-        return self.quota_bytes_total
+        return self._total

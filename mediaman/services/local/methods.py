@@ -1,12 +1,25 @@
 
 import glob
+import os
 import pathlib
+import shutil
 
 from mediaman import config
 
 
 # TODO: rename "destination" to "store" or something asymmetrical
 LOCAL_DESTINATION = config.load("LOCAL_DESTINATION")
+LOCAL_QUOTA = config.load_quota("LOCAL_QUOTA")
+
+
+def folder_size(path):
+    total = 0
+    for entry in os.scandir(path):
+        if entry.is_file():
+            total += entry.stat().st_size
+        elif entry.is_dir():
+            total += folder_size(entry.path)
+    return total
 
 
 def destination_path():
@@ -68,3 +81,9 @@ def download(request):
         with open(request.path, "wb") as outfile:
             outfile.write(infile.read())
     return request.path
+
+
+def capacity():
+    disk_usage = shutil.disk_usage(LOCAL_DESTINATION)
+    used = folder_size(LOCAL_DESTINATION)
+    return {"used": used, "quota": LOCAL_QUOTA, "total": disk_usage.total}

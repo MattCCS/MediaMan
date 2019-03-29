@@ -30,4 +30,4 @@ class SingleClient(abstract.AbstractSingleClient):
         return [self.index.download(identifier)]
 
     def capacity(self):
-        return self.service.capacity()
+        return self.index.capacity()

@@ -3,4 +3,6 @@ from mediaman.core.index import abstract
 
 
 class BaseIndex(abstract.AbstractIndex):
-    pass
+
+    def capacity(self):
+        return self.service.capacity()

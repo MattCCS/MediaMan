@@ -1,5 +1,6 @@
 
 import os
+import re
 import yaml
 
 
@@ -28,3 +29,20 @@ def load(key, default=None):
     """
     ensure_configuration()
     return CONFIGURATION.get(key, os.environ.get(key, default))
+
+
+def load_quota(key, default=None):
+    human_quota = load(key)
+    return parse_human_bytes(human_quota) if human_quota else human_quota
+
+
+def parse_human_bytes(human_bytes):
+    units = {"B": 0, "KB": 1, "MB": 2, "GB": 3, "TB": 4}
+    human_bytes_regex = r"(?P<cap>[\d\._]+)(\s+)?(?P<unit>\D+)"
+    try:
+        m = re.match(human_bytes_regex, human_bytes.strip())
+        cap = float(m["cap"].replace("_", ""))
+        cap *= (1024 ** units[m["unit"]])
+        return int(cap)
+    except (KeyError, ValueError, TypeError) as exc:
+        raise RuntimeError(f"Couldn't parse human bytes: {human_bytes}", exc)

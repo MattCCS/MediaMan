@@ -41,4 +41,6 @@ class LocalService(service.AbstractService):
         )
 
     def capacity(self):
-        raise NotImplementedError()
+        return models.LocalResultQuota(
+            methods.capacity()
+        )

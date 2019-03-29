@@ -25,6 +25,7 @@ OAUTH2_SCOPE = "https://www.googleapis.com/auth/drive"
 CLIENT_SECRETS = config.load("GOOGLE_CLIENT_SECRETS")
 CREDENTIALS = config.load("GOOGLE_CREDENTIALS")
 DESTINATION = config.load("GOOGLE_DESTINATION")
+DRIVE_QUOTA = config.load_quota("GOOGLE_QUOTA")
 
 
 def ensure_directory(drive):
@@ -201,4 +202,15 @@ def search_by_name(drive, file_name, folder_id=None):
 
 
 def capacity(drive, folder_id=None):
-    return drive.about().get().execute()
+    capacity_info = drive.about().get().execute()
+    used = int(capacity_info.get("quotaBytesUsed"))
+    quota = DRIVE_QUOTA
+    total = int(capacity_info.get("quotaBytesTotal"))
+    trashed = int(capacity_info.get("quotaBytesUsedInTrash"))
+
+    return {
+        "used": used,
+        "quota": quota,
+        "total": total,
+        "trashed": trashed,
+    }

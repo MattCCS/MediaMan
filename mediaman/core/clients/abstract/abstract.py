@@ -44,6 +44,11 @@ class AbstractClient(abc.ABC):
         """Download the file(s) described by the given request."""
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def capacity(self) -> models.AbstractResultQuota:
+        """Return the capacity stats of the service."""
+        raise NotImplementedError()
+
     # @abc.abstractmethod
     # def get_file_by_hash(self, file_hash):
     #     raise NotImplementedError()

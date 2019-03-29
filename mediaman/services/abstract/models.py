@@ -57,11 +57,22 @@ class AbstractResultQuota(abc.ABC):
 
     @abc.abstractmethod
     def used(self):
+        """The amount currently used."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def quota(self):
+        """The amount quota by the current quota (if any)."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def total(self):
+        """The total capacity of the service."""
         raise NotImplementedError()
 
+    def allowed(self):
+        """The practical maximum allowed (by the total and quota)."""
+        return min(self.quota(), self.total()) if (self.quota() is not None) else self.total()
+
     def __repr__(self):
-        return f"{type(self)}({self.used() / self.total():.0%} ({human_bytes(self.used())} / {human_bytes(self.total())}))"
+        return f"{type(self)}({self.used() / self.allowed():.0%} ({human_bytes(self.used())} / {human_bytes(self.allowed())}) (potentially {human_bytes(self.total())}))"

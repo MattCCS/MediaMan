@@ -1,6 +1,7 @@
 
 from mediaman.core.clients.multi import abstract
 from mediaman.core.clients.multi import methods
+from mediaman.core.models import MultiResultQuota
 
 
 def gen_first_valid(gen):
@@ -30,10 +31,12 @@ def gen_all(gen):
 class GlobalMulticlient(abstract.AbstractMulticlient):
 
     def list_files(self):
-        results = gen_all(methods.list_files(self.clients))
-        flat_results = [result for response in [result.response for result in results] for result in response]
-        deduped_results = {r["hash"]: r for r in flat_results}
-        return [{"id": r["id"], "name": r["name"], "hash": r["hash"]} for r in deduped_results.values()]
+        deduped_results = {}
+        for result in gen_all(methods.list_files(self.clients)):
+            for result in result.response:
+                if result["hash"] not in deduped_results:
+                    deduped_results[result["hash"]] = result
+                    yield {"id": result["id"], "name": result["name"], "hash": result["hash"]}
 
     def list_file(self, file_id):
         raise NotImplementedError()
@@ -54,4 +57,15 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
         raise NotImplementedError()
 
     def capacity(self):
-        raise NotImplementedError()
+        results = gen_all(methods.capacity(self.clients))
+        grand_used = grand_allowed = grand_total = 0
+        is_partial = False
+        for result in results:
+            if result.response:
+                response = result.response
+                grand_used += response.used()
+                grand_allowed += response.allowed()
+                grand_total += response.total()
+            else:
+                is_partial = True
+        return MultiResultQuota(grand_used, grand_allowed, grand_total, is_partial)
