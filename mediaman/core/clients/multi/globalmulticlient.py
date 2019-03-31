@@ -33,28 +33,33 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
     def list_files(self):
         deduped_results = {}
         for result in gen_all(methods.list_files(self.clients)):
-            for result in result.response:
-                if result["hash"] not in deduped_results:
-                    deduped_results[result["hash"]] = result
-                    yield {"id": result["id"], "name": result["name"], "hash": result["hash"]}
+            for each in result.response:
+                if each["hash"] not in deduped_results:
+                    deduped_results[each["hash"]] = each
+                    yield {"id": each["id"], "name": each["name"], "hash": each["hash"]}
 
-    def list_file(self, file_id):
-        raise NotImplementedError()
+    def has(self, root, file_id):
+        result = list(gen_first_valid(methods.has(self.clients, root, file_id)))
+        return result[0] if result else False
 
     def search_by_name(self, file_name):
         return gen_first_valid(methods.search_by_name(self.clients, file_name))
 
     def fuzzy_search_by_name(self, file_name):
-        raise NotImplementedError()
-
-    def exists(self, file_id):
-        raise NotImplementedError()
+        results = gen_all(methods.fuzzy_search_by_name(self.clients, file_name))
+        deduped_results = set()  # (name, hash)
+        for result in results:
+            for each in result.response:
+                key = (each["name"], each["hash"])
+                if key not in deduped_results:
+                    yield each
+                    deduped_results.add(key)
 
     def upload(self, file_path):
-        raise NotImplementedError()
+        raise NotImplementedError()  # This has to be controlled by policy
 
     def download(self, file_path):
-        raise NotImplementedError()
+        raise NotImplementedError()  # This has to be controlled by policy
 
     def capacity(self):
         results = gen_all(methods.capacity(self.clients))

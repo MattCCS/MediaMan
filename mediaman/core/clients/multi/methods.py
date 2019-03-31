@@ -63,8 +63,8 @@ def list_files(clients) -> Iterable[models.Response]:
     return multi_apply(clients, "list_files")
 
 
-def exists(clients, file_id) -> Iterable[models.Response]:
-    return multi_apply(clients, "exists", file_id)
+def has(clients, root, file_id) -> Iterable[models.Response]:
+    return multi_apply(clients, "has", root, file_id)
 
 
 def search_by_name(clients, file_name) -> Iterable[models.Response]:

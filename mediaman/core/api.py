@@ -18,7 +18,7 @@ def run_list(service_selector=None):
 
 
 def run_has(root, *file_names, service_selector=None):
-    return policy.load_client(service_selector=service_selector).exists(*file_names)
+    return policy.load_client(service_selector=service_selector).has(root, *file_names)
 
 
 def run_get(root, *file_names, service_selector=None):

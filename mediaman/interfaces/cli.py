@@ -40,10 +40,11 @@ PUT_TEXT_MM = "Back up the given file(s)"
 SEARCH_TEXT_MM = "Search MediaMan for the given filename(s)"
 
 LIST_TEXT_GLOBAL = "List all files indexed across all services"
-HAS_TEXT_GLOBAL = "Check which services have the given file(s)"
+HAS_TEXT_GLOBAL = "Check for existence of the given file(s)"
 GET_TEXT_GLOBAL = "Get the given file(s) from whichever service"
 PUT_TEXT_GLOBAL = "Back up the given file(s) to all services"
 SEARCH_TEXT_GLOBAL = "Search all services for the given filename(s)"
+FUZZY_TEXT_GLOBAL = "Search all services for similar filename(s)"
 
 LIST_TEXT_SERVICE = "List the files indexed in this service"
 HAS_TEXT_SERVICE = "Check whether this service has the given file(s)"
@@ -119,6 +120,7 @@ def add_global_commands(subparsers):
     subparsers.add_parser("get", description=GET_TEXT_GLOBAL).add_argument("files", nargs="+")
     subparsers.add_parser("put", description=PUT_TEXT_GLOBAL).add_argument("files", nargs="+")
     subparsers.add_parser("search", description=SEARCH_TEXT_GLOBAL).add_argument("files", nargs="+")
+    subparsers.add_parser("fuzzy", description=FUZZY_TEXT_GLOBAL).add_argument("files", nargs="+")
     subparsers.add_parser("stat")
     subparsers.add_parser("cap")
 
@@ -174,13 +176,14 @@ def main():
     elif args.action == "has":
         results = api.run_has(root, *args.files, service_selector=service_selector)
         if service_selector == "all":
-            columns = (("service", 16),) + tuple((file_name, len(file_name)) for file_name in args.files)
-            it = ((result.client.name(), (' ' if not result.response else str(len(result.response)))) for result in results)
+            columns = (("service", 16),) + tuple((file_name, max(3, len(file_name))) for file_name in args.files)
+            it = ((result.client.name(), ("No" if not result.response else "Yes")) for result in results)
             gen = watertable.table_stream(columns, it)
             for row in gen:
                 print(row)
         else:
-            print(results)
+            print(repr(results))
+            exit(not results)
             # if results:
             #     print(results)
             # else:

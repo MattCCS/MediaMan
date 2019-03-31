@@ -15,8 +15,8 @@ class AbstractClient(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def list_file(self, file_id) -> models.AbstractResultFile:
-        """List the file with the given file ID."""
+    def has(self, root, file_id) -> models.AbstractResultFile:
+        """Return whether a file with that ID exists."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -27,11 +27,6 @@ class AbstractClient(abc.ABC):
     @abc.abstractmethod
     def fuzzy_search_by_name(self, file_name) -> models.AbstractResultFileList:
         """List all files with a name similar to the given name."""
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def exists(self, file_id) -> bool:
-        """Return whether a file with that ID exists."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -48,11 +43,3 @@ class AbstractClient(abc.ABC):
     def capacity(self) -> models.AbstractResultQuota:
         """Return the capacity stats of the service."""
         raise NotImplementedError()
-
-    # @abc.abstractmethod
-    # def get_file_by_hash(self, file_hash):
-    #     raise NotImplementedError()
-
-    # @abc.abstractmethod
-    # def has_by_uuid(self, identifier):
-    #     raise NotImplementedError()

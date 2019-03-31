@@ -98,10 +98,6 @@ class Index(base.BaseIndex):
         return iter(self.metadata.values())
 
     @init
-    def list_file(self, file_id):
-        return self.metadata[self.id_to_metadata_map[file_id]]
-
-    @init
     def search_by_name(self, file_name):
         return [f for f in self.metadata.values() if f["name"] == file_name]
 
@@ -109,9 +105,17 @@ class Index(base.BaseIndex):
     def fuzzy_search_by_name(self, file_name):
         return [f for f in self.metadata.values() if file_name.lower() in f["name"].lower()]
 
+    # @init
+    # def has_by_uuid(self, file_id):
+    #     return file_id in self.id_to_metadata_map
+
     @init
-    def exists(self, file_id):
-        return file_id in self.id_to_metadata_map
+    def has_file(self, file_path):
+        hash = hashing.hash(file_path)
+        try:
+            return self.metadata[self.hash_to_metadata_map[hash]]
+        except KeyError:
+            return False
 
     @init
     def upload(self, file_path):
