@@ -29,7 +29,7 @@ class Multiclient(abstract.AbstractMulticlient):
         return gen_all(methods.fuzzy_search_by_name(self.clients, file_name))
 
     def upload(self, file_path):
-        raise NotImplementedError()  # Iterate through all and PUT (idempotent)
+        return gen_all(methods.upload(self.clients, file_path))
 
     def download(self, file_path):
         raise RuntimeError()  # `mm all get` isn't allowed

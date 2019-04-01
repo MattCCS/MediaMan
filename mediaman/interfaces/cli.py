@@ -196,7 +196,11 @@ def main():
         print(repr(results))
     elif args.action == "put":
         results = api.run_put(root, *args.files, service_selector=service_selector)
-        print(repr(results))
+        if all_mode:
+            for result in results:
+                print(repr(result))
+        else:
+            print(repr(results))
     elif args.action == "search":
         results = api.run_search(root, *args.files, service_selector=service_selector)
         total = 0
