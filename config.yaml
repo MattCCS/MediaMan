@@ -2,27 +2,68 @@
 #
 # NOTE: This file is for PUBLIC DATA ONLY!
 
-# Drive
-GOOGLE_CLIENT_SECRETS: "credentials/drive/client-secrets/client-secret.json"
-GOOGLE_CREDENTIALS: "credentials/drive/credentials/stored"
-GOOGLE_DESTINATION: "MediaMan"
-GOOGLE_QUOTA: 90GB
 
-# Local
-LOCAL_DESTINATION: "local-storage"
-LOCAL_QUOTA: 20GB
+### Fields:
+# - type: <choose one>
+# - quota: <e.g. 100GB>
+# - destination: <path, folder name, URI, etc.>
+# - credentials: <nested values, arbitrary>
+# - cost: <true/false.  Whether this service costs money for upload/download/storage.  Defaults to false.>
+
+
+### Required Fields:
+# type, quota, destination
+
+
+### Service Types:
+# - folder
+# - dropbox
+# - google drive
+# - aws s3
+# - aws glacier
+
 
 # service configs
 services:
-  local1:
-    destination: "/Volumes/ExternalDrive/me"
-  local2:
-    destination: "/Network/some-share/me"
+  drive:
+    type: google drive
+    quota: 90GB
+    destination: MediaMan
+    credentials:
+      GOOGLE_CLIENT_SECRETS: credentials/drive/client-secrets/client-secret.json
+      GOOGLE_CREDENTIALS: credentials/drive/credentials/stored
+  local:
+    type: folder
+    quota: 20GB
+    destination: local-storage
+  s3:
+    type: aws s3
+    quota: 10GB
+    destination: MediaMan
+    cost: true
+  ex:
+    type: folder
+    quota: 1TB
+    destination: /Volumes/ExternalDrive/me
+  net:
+    type: folder
+    quota: 2TB
+    destination: /Network/some-share/me
 
 resolution-order:
-  - local1
-  - local2
+  - local
+  - external
+  - network
   - drive
-
-cost:
   - aws
+
+strategy:
+  keep-copies: 2
+  prefer-grouping:
+    video:
+      - ex
+      - net
+    music:
+      - drive
+      - ex
+      - net
