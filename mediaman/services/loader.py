@@ -16,11 +16,11 @@ def load_all():
     ]
 
 
-def load_drive():
-    from mediaman.services.drive import service as driveservice
-    return driveservice.DriveService()
-
-
 def load_local():
     from mediaman.services.local import service as localservice
     return localservice.LocalService()
+
+
+def load_drive():
+    from mediaman.services.drive import service as driveservice
+    return driveservice.DriveService()

@@ -52,10 +52,10 @@ services:
 
 resolution-order:
   - local
-  - external
-  - network
+  - ex
+  - net
   - drive
-  - aws
+  - s3
 
 strategy:
   keep-copies: 2
