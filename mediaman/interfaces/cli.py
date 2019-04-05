@@ -123,6 +123,7 @@ def add_global_commands(subparsers):
     subparsers.add_parser("fuzzy", description=FUZZY_TEXT_GLOBAL).add_argument("files", nargs="+")
     subparsers.add_parser("stat")
     subparsers.add_parser("cap")
+    subparsers.add_parser("config")
 
 
 def add_service_commands(subparsers):
@@ -153,7 +154,11 @@ def main():
 
     all_mode = service_selector == "all"
 
-    if args.action == "list":
+    if args.action == "config":
+        import pprint
+        print(pprint.pformat(api.run_config()))
+        exit(0)
+    elif args.action == "list":
         results = api.run_list(service_selector=service_selector)
         columns = ((("service", 16),) if all_mode else ()) + (("name", 40 + (0 if all_mode else 12)), ("hash", 64), ("id", 36))
         # it = ((result.client.name(), (' ' if not result.response else str(len(result.response)))) for result in results)

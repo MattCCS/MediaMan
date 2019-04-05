@@ -39,3 +39,7 @@ def run_fuzzy(root, *file_names, service_selector=None):
 
 def run_cap(service_selector=None):
     return policy.load_client(service_selector=service_selector).capacity()
+
+
+def run_config():
+    return policy.load_policy().get_config()

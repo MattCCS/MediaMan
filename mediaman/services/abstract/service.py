@@ -15,6 +15,13 @@ def auth(func):
 
 class AbstractService(abc.ABC):
 
+    def __init__(self, config):
+        self._config = config
+        self._type = self._config["type"]
+        self._quota = self._config["quota"]
+        self._destination = self._config["destination"]
+        self._cost = self._config["cost"]
+
     @abc.abstractmethod
     def authenticate(self) -> None:
         """Authenticate with the service, if necessary."""

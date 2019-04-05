@@ -4,13 +4,6 @@ import os
 import pathlib
 import shutil
 
-from mediaman import config
-
-
-# TODO: rename "destination" to "store" or something asymmetrical
-LOCAL_DESTINATION = config.load("LOCAL_DESTINATION")
-LOCAL_QUOTA = config.load_quota("LOCAL_QUOTA")
-
 
 def folder_size(path):
     total = 0
@@ -22,15 +15,11 @@ def folder_size(path):
     return total
 
 
-def destination_path():
-    assert LOCAL_DESTINATION
-    path = pathlib.Path(LOCAL_DESTINATION)
+def require_destination_path(destination):
+    assert destination
+    path = pathlib.Path(destination)
     assert path.exists()
     return path
-
-
-def destination():
-    return str(destination_path())
 
 
 def extractor(path):
@@ -41,49 +30,49 @@ def extractor(path):
     }
 
 
-def list_files():
+def list_files(destination_path):
     return map(
         extractor,
-        (pathlib.Path(path) for path in glob.glob(f"{destination()}/*"))
+        (pathlib.Path(path) for path in glob.glob(f"{str(destination_path)}/*"))
     )
 
 
-def list_file(file_id):
-    path = pathlib.Path(destination_path() / file_id)
+def list_file(destination_path, file_id):
+    path = pathlib.Path(destination_path / file_id)
     if not path.exists():
         raise FileNotFoundError()  # TODO: raise custom error
 
     return extractor(path)
 
 
-def search_by_name(file_name):
-    out = (data for data in list_files() if data["name"] == file_name)
+def search_by_name(destination_path, file_name):
+    out = (data for data in list_files(destination_path) if data["name"] == file_name)
     return out
 
 
-def exists(file_id):
-    return (destination_path() / file_id).exists()
+def exists(destination_path, file_id):
+    return (destination_path / file_id).exists()
 
 
-def upload(request):
+def upload(destination_path, request):
     # TODO: check for overwriting?
-    dest = destination_path() / request.id
+    dest = destination_path / request.id
     with open(request.path, "rb") as infile:
         with open(dest, "wb") as outfile:
             outfile.write(infile.read())
     return request.id
 
 
-def download(request):
+def download(destination_path, request):
     # TODO: check for overwriting?
-    source_file_path = destination_path() / request.id
+    source_file_path = destination_path / request.id
     with open(source_file_path, "rb") as infile:
         with open(request.path, "wb") as outfile:
             outfile.write(infile.read())
     return request.path
 
 
-def capacity():
-    disk_usage = shutil.disk_usage(LOCAL_DESTINATION)
-    used = folder_size(LOCAL_DESTINATION)
-    return {"used": used, "quota": LOCAL_QUOTA, "total": disk_usage.total}
+def capacity(destination_path, quota):
+    disk_usage = shutil.disk_usage(destination_path)
+    used = folder_size(destination_path)
+    return {"used": used, "quota": quota, "total": disk_usage.total}

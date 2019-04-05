@@ -1,26 +1,37 @@
 
+import enum
 
-def load(name):
-    if name == "local":
-        return load_local()
-    elif name == "drive":
-        return load_drive()
-    else:
-        raise NotImplementedError()
+__all__ = [
+    "load"
+]
 
 
-def load_all():
-    return [
-        load_local(),
-        load_drive(),
-    ]
-
-
-def load_local():
+def load_local(config):
     from mediaman.services.local import service as localservice
-    return localservice.LocalService()
+    return localservice.LocalService(config)
 
 
-def load_drive():
+def load_drive(config):
     from mediaman.services.drive import service as driveservice
-    return driveservice.DriveService()
+    return driveservice.DriveService(config)
+
+
+class ServiceType(enum.Enum):
+    FOLDER = "folder"
+    GOOGLE_DRIVE = "google drive"
+    DROPBOX = "dropbox"
+    AWS_S3 = "aws s3"
+    AWS_GLACIER = "aws glacier"
+
+
+SERVICE_TYPE_TO_LOADER = {
+    ServiceType.FOLDER: load_local,
+    ServiceType.GOOGLE_DRIVE: load_drive,
+    ServiceType.DROPBOX: None,
+    ServiceType.AWS_S3: None,
+    ServiceType.AWS_GLACIER: None,
+}
+
+
+def load(service_type, config):
+    return SERVICE_TYPE_TO_LOADER[service_type](config)
