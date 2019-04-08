@@ -2,6 +2,17 @@
 import abc
 
 
+class BaseConfig(abc.ABC):
+
+    def __init__(self, config):
+        self._config = config
+        self.type = self._config["type"]
+        self.quota = self._config["quota"]
+        self.destination = self._config["destination"]
+        self.cost = self._config["cost"]
+        self.extra = self._config["extra"]
+
+
 class AbstractReceiptFile(abc.ABC):
 
     @abc.abstractmethod

@@ -31,6 +31,7 @@ class Policy:
             "quota": config.parse_human_bytes(service_config["quota"]),
             "destination": service_config["destination"],
             "cost": service_config.get("cost", False),
+            "extra": service_config.get("extra", None),
         }
         self.nickname_to_config[nickname] = config_data
 
@@ -46,7 +47,7 @@ class Policy:
             try:
                 yield self.load_service(nickname)
             except Exception as exc:
-                print(exc)
+                print(f"Failed to load service '{nickname}': {exc}")
 
     def load_client(self, service_selector):
         if service_selector is None:

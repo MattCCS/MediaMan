@@ -2,6 +2,10 @@
 from mediaman.services.abstract import models
 
 
+class LocalConfig(models.BaseConfig):
+    pass
+
+
 class LocalReceiptFile(models.AbstractReceiptFile):
 
     def __init__(self, filename):

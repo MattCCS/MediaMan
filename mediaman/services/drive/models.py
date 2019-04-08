@@ -2,6 +2,14 @@
 from mediaman.services.abstract import models
 
 
+class DriveConfig(models.BaseConfig):
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.client_secrets = self.extra["GOOGLE_CLIENT_SECRETS"]
+        self.credentials = self.extra["GOOGLE_CREDENTIALS"]
+
+
 class DriveReceiptFile(models.AbstractReceiptFile):
 
     def __init__(self, file_data):

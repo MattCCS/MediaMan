@@ -10,8 +10,8 @@ from mediaman.services.local import models
 class LocalService(service.AbstractService):
 
     def __init__(self, config):
-        super().__init__(config)
-        self.destination_path = methods.require_destination_path(self._destination)
+        super().__init__(models.LocalConfig(config))
+        self.destination_path = methods.require_destination_path(self._config.destination)
         # TODO: rename "destination" to "store" or something asymmetrical
 
     def authenticate(self):
@@ -47,5 +47,5 @@ class LocalService(service.AbstractService):
 
     def capacity(self):
         return models.LocalResultQuota(
-            methods.capacity(self.destination_path, self._quota)
+            methods.capacity(self.destination_path, self._config.quota)
         )

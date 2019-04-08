@@ -10,7 +10,7 @@ from mediaman.services.drive import models
 class DriveService(service.AbstractService):
 
     def __init__(self, config):
-        super().__init__(config)
+        super().__init__(models.DriveConfig(config))
 
         self._drive = None
         self._folder_id = None
@@ -19,8 +19,8 @@ class DriveService(service.AbstractService):
     def authenticate(self):
         if self._authenticated:
             return
-        self._drive = methods.authenticate()
-        self._folder_id = methods.ensure_directory(self._drive)
+        self._drive = methods.authenticate(self._config.client_secrets, self._config.credentials)
+        self._folder_id = methods.ensure_directory(self._drive, self._config.destination)
         self._authenticated = True
 
     @service.auth
@@ -64,5 +64,5 @@ class DriveService(service.AbstractService):
     @service.auth
     def capacity(self):
         return models.DriveResultQuota(
-            methods.capacity(self._drive)
+            methods.capacity(self._drive, self._config.quota)
         )

@@ -33,5 +33,5 @@ SERVICE_TYPE_TO_LOADER = {
 }
 
 
-def load(service_type, config):
+def load(service_type: ServiceType, config):
     return SERVICE_TYPE_TO_LOADER[service_type](config)
