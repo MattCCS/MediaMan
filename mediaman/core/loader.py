@@ -1,8 +1,7 @@
 
-from mediaman.core.index.index import Index
-
 
 def load_index_class():
+    from mediaman.core.index.index import Index
     return Index
 
 

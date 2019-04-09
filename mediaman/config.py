@@ -1,19 +1,32 @@
 
 import os
-import re
 import yaml
 
 
+CONFIGURATION_ENV_VAR = "MMCONFIG"
 DEFAULT_CONFIGURATION_PATH = "config.yaml"
-CONFIGURATION_PATH = os.environ.get("MMCONFIG", DEFAULT_CONFIGURATION_PATH)
+CONFIGURATION_PATH = os.environ.get(CONFIGURATION_ENV_VAR, DEFAULT_CONFIGURATION_PATH)
 CONFIGURATION = None
+
+
+ERROR_GENERIC_CONFIGURATION_FAILURE = f"""\
+There was a generic problem with the config file at '{CONFIGURATION_PATH}'.
+Please ensure the file exists, is valid, and includes all required fields.
+
+You can control the config file path by setting the environment variable
+'{CONFIGURATION_ENV_VAR}'.  Otherwise, the default path is '{DEFAULT_CONFIGURATION_PATH}'."""
 
 
 def reload_configuration():
     global CONFIGURATION
     assert CONFIGURATION_PATH
-    with open(CONFIGURATION_PATH) as infile:
-        CONFIGURATION = yaml.safe_load(infile)
+    try:
+        with open(CONFIGURATION_PATH) as infile:
+            CONFIGURATION = yaml.safe_load(infile)
+    except FileNotFoundError as exc:
+        import traceback
+        print(traceback.format_exc())
+        exit_with_generic_warning()
 
 
 def ensure_configuration():
@@ -31,18 +44,17 @@ def load(key, default=None):
     return CONFIGURATION.get(key, os.environ.get(key, default))
 
 
-def load_quota(key, default=None):
-    human_quota = load(key)
-    return parse_human_bytes(human_quota) if human_quota else human_quota
-
-
-def parse_human_bytes(human_bytes):
-    units = {"B": 0, "KB": 1, "MB": 2, "GB": 3, "TB": 4}
-    human_bytes_regex = r"(?P<cap>[\d\._]+)(\s+)?(?P<unit>\D+)"
+def load_safe(key):
+    ensure_configuration()
     try:
-        m = re.match(human_bytes_regex, human_bytes.strip())
-        cap = float(m["cap"].replace("_", ""))
-        cap *= (1024 ** units[m["unit"]])
-        return int(cap)
-    except (KeyError, ValueError, TypeError) as exc:
-        raise RuntimeError(f"Couldn't parse human bytes: {human_bytes}", exc)
+        return CONFIGURATION[key]
+    except KeyError:
+        try:
+            return os.environ[key]
+        except KeyError:
+            print(f"Failed to load `{key}` from your config file!\n")
+    exit_with_generic_warning()
+
+
+def exit_with_generic_warning():
+    exit(ERROR_GENERIC_CONFIGURATION_FAILURE)
