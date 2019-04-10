@@ -2,6 +2,7 @@
 import enum
 import sys
 
+from mediaman.core import api
 from mediaman.core import logtools
 
 
@@ -15,7 +16,8 @@ Pass the help flag (-h or --help) for more info."""
 DESCRIPTION = """\
 MediaMan is a tool to manage the backup of files and data to arbitrary services
 (such as Google Drive, Dropbox, external drives, etc.) with a consistent
-interface and user experience."""
+interface and user experience.
+Run `mm <service> (-h | --help)` for more info about any particular service."""
 
 SERVICES_TEXT = """List the service nicknames found in your config file.
 (Does not guarantee that the services are active, or are even configured properly.)"""
@@ -63,14 +65,21 @@ def parse_args():
     if len(sys.argv) < 2:
         exit(parse_args_empty())  # to show short description
 
-    if sys.argv[1] in ('-h', '--help'):
-        exit(parse_args_base())  # to show help text
+    service_names = api.get_service_names()
 
-    if sys.argv[1] in ACTIONS:
+    args = set(sys.argv[1:])
+    help = args & set(['-h', '--help'])
+    services = args & set(service_names)
+    actions = args & set(ACTIONS)
+
+    if help and not (services or actions):
+        exit(parse_args_base(service_names))
+
+    if not services:
         args = parse_args_action()
         args.service = None
     else:
-        args = parse_args_service_action()
+        args = parse_args_service_action(service_names)
 
     return args
 
@@ -88,11 +97,11 @@ def base_parser():
     return parser
 
 
-def parse_args_base():
+def parse_args_base(service_names):
     """Check for `mm (-h, --help)`"""
     parser = base_parser()
 
-    parser.add_argument("service", nargs="?", help="(run `mm services` for options)")
+    parser.add_argument("service", nargs="?", help=f"{{{', '.join(service_names)}}} (Optional. From your config file.)")
     parser.add_argument("action", nargs="?", metavar="action", choices=ACTIONS, help="{%(choices)s}")
 
     return parser.parse_args()
@@ -108,11 +117,8 @@ def parse_args_action():
     return parser.parse_args()
 
 
-def parse_args_service_action():
+def parse_args_service_action(service_names):
     """Check for `mm <service> [action]`"""
-    from mediaman.core import api
-    service_names = api.get_service_names()
-
     parser = base_parser()
 
     service_parsers = parser.add_subparsers(dest="service")
@@ -158,8 +164,7 @@ def add_commands(subparsers, service=None):
 
 
 def run_services():
-    from mediaman.core import policy
-    return policy.load_service_names()
+    return api.get_service_names()
 
 
 def main():
