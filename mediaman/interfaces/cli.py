@@ -167,6 +167,27 @@ def run_services():
     return api.get_service_names()
 
 
+def run_file_list(results, all_mode=False):
+    from mediaman.core import watertable
+
+    columns = ((("service", 16),) if all_mode else ()) + (("name", 40 + (0 if all_mode else 19)), ("hash", 64), ("id", 36))
+
+    def files_iterator(file_results_list):
+        nonlocal all_mode
+        if not all_mode:
+            for item in file_results_list:
+                yield (item["name"], item["hash"], item["id"])
+        else:
+            for result in file_results_list:
+                if result.response:
+                    for item in result.response:
+                        yield (result.client.name(), item["name"], item["hash"], item["id"])
+
+    gen = watertable.table_stream(columns, files_iterator(results))
+    for row in gen:
+        print(row)
+
+
 def main():
     args = parse_args()
 
@@ -181,6 +202,23 @@ def main():
     service_selector = args.service
     all_mode = service_selector == "all"
 
+    file_results_list_funcs = {
+        "list", "search", "fuzzy"
+    }
+
+    if args.action in file_results_list_funcs:
+        if args.action == "list":
+            results = api.run_list(service_selector=service_selector)
+        elif args.action == "search":
+            results = api.run_search(root, *args.files, service_selector=service_selector)
+        elif args.action == "fuzzy":
+            results = api.run_fuzzy(root, *args.files, service_selector=service_selector)
+        else:
+            raise NotImplementedError()
+
+        run_file_list(results, all_mode=all_mode)
+        exit(0)
+
     if args.action == "config":
         import pprint
         print(pprint.pformat(api.run_config(args.service)))
@@ -188,26 +226,6 @@ def main():
     elif args.action == "services":
         print(run_services())
         exit(0)
-    elif args.action == "list":
-        results = api.run_list(service_selector=service_selector)
-        columns = ((("service", 16),) if all_mode else ()) + (("name", 40 + (0 if all_mode else 12)), ("hash", 64), ("id", 36))
-        # it = ((result.client.name(), (' ' if not result.response else str(len(result.response)))) for result in results)
-        # it = (() for result in results for row in result.response)
-
-        def it(results):
-            nonlocal all_mode
-            if not all_mode:
-                for item in results:
-                    yield (item["name"], item["hash"], item["id"])
-            else:
-                for result in results:
-                    if result.response:
-                        for item in result.response:
-                            yield (result.client.name(), item["name"], item["hash"], item["id"])
-
-        gen = watertable.table_stream(columns, it(results))
-        for row in gen:
-            print(row)
     elif args.action == "has":
         results = api.run_has(root, *args.files, service_selector=service_selector)
         if service_selector == "all":
@@ -217,7 +235,7 @@ def main():
             for row in gen:
                 print(row)
         else:
-            print(repr(results))
+            print("Yes" if results else "No")
             exit(not results)
             # if results:
             #     print(results)
@@ -236,29 +254,6 @@ def main():
                 print(repr(result))
         else:
             print(repr(results))
-    elif args.action == "search":
-        results = api.run_search(root, *args.files, service_selector=service_selector)
-        total = 0
-        for (total, result) in enumerate(results, 1):
-            print(result)
-        print(f"{total} results found.")
-    elif args.action == "fuzzy":
-        results = api.run_fuzzy(root, *args.files, service_selector=service_selector)
-        if service_selector != "all":
-            columns = (("name", 60), ("hash", 64), ("id", 36))
-
-            def it(results):
-                for item in results:
-                    yield (item["name"], item["hash"], item["id"])
-
-            gen = watertable.table_stream(columns, it(results))
-            for row in gen:
-                print(row)
-        else:
-            total = 0
-            for (total, result) in enumerate(results, 1):
-                print(result)
-            print(f"{total} results found.")
     elif args.action == "cap":
         results = api.run_cap(service_selector=service_selector)
         if service_selector != "all":

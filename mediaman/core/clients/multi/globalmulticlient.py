@@ -43,7 +43,14 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
         return result[0] if result else False
 
     def search_by_name(self, file_name):
-        return gen_first_valid(methods.search_by_name(self.clients, file_name))
+        results = gen_all(methods.search_by_name(self.clients, file_name))
+        deduped_results = set()  # (name, hash)
+        for result in results:
+            for each in result.response:
+                key = (each["name"], each["hash"])
+                if key not in deduped_results:
+                    yield each
+                    deduped_results.add(key)
 
     def fuzzy_search_by_name(self, file_name):
         results = gen_all(methods.fuzzy_search_by_name(self.clients, file_name))
