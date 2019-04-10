@@ -41,5 +41,13 @@ def run_cap(service_selector=None):
     return policy.load_client(service_selector=service_selector).capacity()
 
 
-def run_config():
-    return policy.load_policy().get_config()
+def run_config(service_selector=None):
+    return policy.load_policy().get_config(service_selector=service_selector)
+
+
+def get_service_names():
+    return policy.load_service_names()
+
+
+def get_service_description(service_selector):
+    return policy.load_service_description(service_selector)

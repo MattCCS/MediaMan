@@ -18,6 +18,7 @@ Error: `all` is a reserved service nickname!  You must modify
 your config file to rename that service, otherwise other
 MediaMan commands will not run!"""
 
+
 POLICY = None
 
 
@@ -26,6 +27,14 @@ def load_service_names():
     if SERVICE_NICKNAME_ALL in config_services:
         exit(ERROR_RESERVED_SERVICE_NICKNAME)
     return [SERVICE_NICKNAME_ALL] + list(config_services)
+
+
+def load_service_description(service_selector):
+    from mediaman.core import descriptions
+    if service_selector == "all":
+        return descriptions.ALL_DESCRIPTION
+    service_type = config.load(SERVICES_CONFIG_KEY)[service_selector]["type"]
+    return descriptions.SERVICE_TYPE_TO_DESCRIPTION[services_loader.ServiceType(service_type)]
 
 
 class Policy:
@@ -74,14 +83,10 @@ class Policy:
             service_name = service_selector
             return loader.load_single_client(self.load_service(service_name))
 
-    def get_all_configs(self):
-        return self.nickname_to_config
-
-    def get_config(self, nickname):
-        return self.nickname_to_config[nickname]
-
-    def get_service_description(self, service_type):
-        return services_loader.load_description(service_type)
+    def get_config(self, service_selector=None):
+        if not service_selector or service_selector == "all":
+            return self.nickname_to_config
+        return self.nickname_to_config[service_selector]
 
 
 def load_policy():
