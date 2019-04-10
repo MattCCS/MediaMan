@@ -36,19 +36,19 @@ services:
     type: folder
     quota: 20GB
     destination: local-storage
-  s3:
-    type: aws s3
-    quota: 10GB
-    destination: MediaMan
-    cost: true
-  ex:
-    type: folder
-    quota: 1TB
-    destination: /Volumes/ExternalDrive/me
-  net:
-    type: folder
-    quota: 2TB
-    destination: /Network/some-share/me
+  # s3:
+  #   type: aws s3
+  #   quota: 10GB
+  #   destination: MediaMan
+  #   cost: true
+  # ex:
+  #   type: folder
+  #   quota: 1TB
+  #   destination: /Volumes/ExternalDrive/me
+  # net:
+  #   type: folder
+  #   quota: 2TB
+  #   destination: /Network/some-share/me
 
 resolution-order:
   - local

@@ -2,7 +2,11 @@
 Universal API to interact with MediaMan
 """
 
+import sys
+assert sys.version_info >= (3, 7, 0)  # noqa
+
 from mediaman.core import policy
+
 
 __all__ = [
     "run_list",
@@ -10,6 +14,11 @@ __all__ = [
     "run_get",
     "run_put",
     "run_search",
+    "run_fuzzy",
+    "run_cap",
+    "run_config",
+    "get_service_names",
+    "get_service_description",
 ]
 
 
@@ -50,4 +59,4 @@ def get_service_names():
 
 
 def get_service_description(service_selector):
-    return policy.load_service_description(service_selector)
+    return policy.load_policy().load_service_description(service_selector)

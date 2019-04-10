@@ -27,11 +27,12 @@ class ServiceType(enum.Enum):
 SERVICE_TYPE_TO_LOADER = {
     ServiceType.FOLDER: load_local,
     ServiceType.GOOGLE_DRIVE: load_drive,
-    ServiceType.DROPBOX: None,
-    ServiceType.AWS_S3: None,
-    ServiceType.AWS_GLACIER: None,
 }
 
 
 def load(service_type: ServiceType, config):
-    return SERVICE_TYPE_TO_LOADER[service_type](config)
+    try:
+        return SERVICE_TYPE_TO_LOADER[service_type](config)
+    except KeyError as exc:
+        print(f"No service loader configured for {service_type}!")
+        raise

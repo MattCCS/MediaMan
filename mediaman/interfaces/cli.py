@@ -115,11 +115,10 @@ def parse_args_service_action():
 
     parser = base_parser()
 
-    service_parser_map = {}
     service_parsers = parser.add_subparsers(dest="service")
     for service_name in service_names:
-        service_parser = service_parsers.add_parser(service_name)
-        service_parser_map[service_name] = service_parser
+        description = f"'{service_name}' {api.get_service_description(service_name)}"
+        service_parser = service_parsers.add_parser(service_name, description=description)
 
         logtools.add_log_parser(service_parser)
         service_action_parsers = service_parser.add_subparsers(dest="action")
@@ -127,10 +126,7 @@ def parse_args_service_action():
 
     args = parser.parse_args()
     if not args.action:
-        service_name = args.service
-        description = f"'{service_name}' {api.get_service_description(service_name)}"
-        service_parser_map[service_name].description = description
-        parser.parse_args([service_name, '-h'])
+        parser.parse_args([args.service, '-h'])
 
     return args
 

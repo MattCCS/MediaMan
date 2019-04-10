@@ -13,4 +13,4 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 cd "$DIR"
 
 . venv/bin/activate
-SAVED_PWD=$SAVED_PWD python3.7 -Bum mediaman.interfaces.cli "$@"
+SAVED_PWD=$SAVED_PWD python3 -Bum mediaman.interfaces.cli "$@"

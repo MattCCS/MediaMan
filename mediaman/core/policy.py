@@ -29,14 +29,6 @@ def load_service_names():
     return [SERVICE_NICKNAME_ALL] + list(config_services)
 
 
-def load_service_description(service_selector):
-    from mediaman.core import descriptions
-    if service_selector == "all":
-        return descriptions.ALL_DESCRIPTION
-    service_type = config.load(SERVICES_CONFIG_KEY)[service_selector]["type"]
-    return descriptions.SERVICE_TYPE_TO_DESCRIPTION[services_loader.ServiceType(service_type)]
-
-
 class Policy:
 
     def __init__(self):
@@ -72,21 +64,29 @@ class Policy:
             try:
                 yield self.load_service(nickname)
             except Exception as exc:
-                print(f"Failed to load service '{nickname}': {exc}")
+                import traceback
+                print(f"Failed to load service '{nickname}': {traceback.format_exc()}")
 
     def load_client(self, service_selector):
         if service_selector is None:
             return loader.load_global_client(self.load_all_services())
-        elif service_selector == "all":
+        elif service_selector == SERVICE_NICKNAME_ALL:
             return loader.load_multi_client(self.load_all_services())
         else:
             service_name = service_selector
             return loader.load_single_client(self.load_service(service_name))
 
     def get_config(self, service_selector=None):
-        if not service_selector or service_selector == "all":
+        if not service_selector or service_selector == SERVICE_NICKNAME_ALL:
             return self.nickname_to_config
         return self.nickname_to_config[service_selector]
+
+    def load_service_description(self, service_selector):
+        from mediaman.core import descriptions
+        if service_selector == SERVICE_NICKNAME_ALL:
+            return descriptions.ALL_DESCRIPTION
+        service_type = self.nickname_to_config[service_selector]["type"]
+        return descriptions.SERVICE_TYPE_TO_DESCRIPTION[service_type]
 
 
 def load_policy():
