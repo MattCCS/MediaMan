@@ -2,29 +2,61 @@
 Universal API to interact with MediaMan
 """
 
-from mediaman.core import client
-from mediaman.core import methods
-from mediaman.services import loader
+import sys
+assert sys.version_info >= (3, 7, 0)  # noqa
+
+from mediaman.core import policy
+
 
 __all__ = [
-    "run_global",
-    "run_single",
-    "run_multi",
+    "run_list",
+    "run_has",
+    "run_get",
+    "run_put",
+    "run_search",
+    "run_fuzzy",
+    "run_cap",
+    "run_config",
+    "get_service_names",
+    "get_service_description",
 ]
 
 
-def run_global(root, args):
-    services = loader.load_all()
-    # TODO: single (multi-)client object wrapper
-    clients = [client.Client(service) for service in services]
-    return methods.run_global(root, args, clients)
+def run_list(service_selector=None):
+    return policy.load_client(service_selector=service_selector).list_files()
 
 
-def run_single(root, args):
-    service = loader.load(args.service)
-    client_ = client.Client(service)
-    return methods.run_service(root, args, client_)
+def run_has(root, *file_names, service_selector=None):
+    return policy.load_client(service_selector=service_selector).has(root, *file_names)
 
 
-def run_multi(root, args):
-    raise NotImplementedError()
+def run_get(root, *file_names, service_selector=None):
+    return policy.load_client(service_selector=service_selector).download(*file_names)
+
+
+def run_put(root, *file_names, service_selector=None):
+    return policy.load_client(service_selector=service_selector).upload(*file_names)
+
+
+def run_search(root, *file_names, service_selector=None):
+    return policy.load_client(service_selector=service_selector).search_by_name(*file_names)
+
+
+def run_fuzzy(root, *file_names, service_selector=None):
+    return policy.load_client(service_selector=service_selector).fuzzy_search_by_name(*file_names)
+
+
+def run_cap(service_selector=None):
+    return policy.load_client(service_selector=service_selector).capacity()
+
+
+def run_config(service_selector=None):
+    return policy.load_policy().get_config(service_selector=service_selector)
+
+
+def get_service_names():
+    return policy.load_service_names()
+
+
+def get_service_description(service_selector):
+    return policy.load_policy().load_service_description(service_selector)

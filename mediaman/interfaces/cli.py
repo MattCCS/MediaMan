@@ -1,9 +1,10 @@
 
-import argparse
-import pathlib
+import enum
+import sys
 
-from mediaman import config
 from mediaman.core import api
+from mediaman.core import logtools
+
 
 COMMAND_NAME = "mm"
 
@@ -15,129 +16,252 @@ Pass the help flag (-h or --help) for more info."""
 DESCRIPTION = """\
 MediaMan is a tool to manage the backup of files and data to arbitrary services
 (such as Google Drive, Dropbox, external drives, etc.) with a consistent
-interface and user experience."""
+interface and user experience.
+Run `mm <service> (-h | --help)` for more info about any particular service."""
 
-LOCAL_DESCRIPTION = """\
-[local] -- Allows you to back up files to a network share, external drive,
-or even a directory on your local drive (if that's what you're into).
-Configurable in the config.yaml file."""
+SERVICES_TEXT = """List the service nicknames found in your config file.
+(Does not guarantee that the services are active, or are even configured properly.)"""
+SYNC_TEXT = "Synchronizes all services (if possible)"
+LIST_TEXT = "List all files indexed by MediaMan"
+HAS_TEXT = "Check whether MediaMan has the given file(s)"
+GET_TEXT = "Retrieve the given file(s) from MediaMan"
+PUT_TEXT = "Save the given file(s) to MediaMan"
+SEARCH_TEXT = "Search MediaMan for the given filename(s)"
+FUZZY_TEXT = "Search MediaMan for similar filename(s)"
+STATUS_TEXT = "Report on the status/availability of MediaMan"
+CAPACITY_TEXT = "Report on the visible capacity of MediaMan"
+CONFIG_TEXT = "Show the config info of MediaMan"
 
-DRIVE_DESCRIPTION = """\
-[drive] -- Allows you to back up files to Google Drive (requires Drive credentials).
-Can even back up to a specific folder within Google Drive.
-Configurable in the config.yaml file."""
-
-ALL_DESCRIPTION = """\
-[all] -- Allows you to back up files to all configured services at once.
-Will also report information about all configured services."""
-
-LIST_TEXT_MM = "List all files indexed by MediaMan"
-HAS_TEXT_MM = "Check whether MediaMan has the given file(s)"
-GET_TEXT_MM = "Get the given file(s)"
-PUT_TEXT_MM = "Back up the given file(s)"
-
-LIST_TEXT_GLOBAL = "List all files indexed across all services"
-HAS_TEXT_GLOBAL = "Check which services have the given file(s)"
-GET_TEXT_GLOBAL = "Get the given file(s) from whichever service"
-PUT_TEXT_GLOBAL = "Back up the given file(s) to all services"
-
-LIST_TEXT_SERVICE = "List the files indexed in this service"
+LIST_TEXT_SERVICE = "List all files indexed by this service"
 HAS_TEXT_SERVICE = "Check whether this service has the given file(s)"
-GET_TEXT_SERVICE = "Get the given file(s) from this service"
-PUT_TEXT_SERVICE = "Back up the given file(s) to this service"
+GET_TEXT_SERVICE = "Retrieve the given file(s) from this service"
+PUT_TEXT_SERVICE = "Save the given file(s) to this service"
+SEARCH_TEXT_SERVICE = "Search this service for the given filename(s)"
+FUZZY_TEXT_SERVICE = "Search this service for similar filename(s)"
+STATUS_TEXT_SERVICE = "Report on the status/availability of this service"
+CAPACITY_TEXT_SERVICE = "Report on the visible capacity of this service"
+CONFIG_TEXT_SERVICE = "Show the config info of this service"
 
 
-# def parse_args():
-#     parser = argparse.ArgumentParser(description="MediaMan!")
-#     command_group = parser.add_mutually_exclusive_group()
-#     subcommand_group = parser.add_mutually_exclusive_group()
+class Action(enum.Enum):
+    SERVICES = "services"
+    SYNC = "sync"
 
-#     subparsers = subcommand_group.add_subparsers(help="sub-command help")
-#     parser_list = [command_group]
-#     parser_list.append(subparsers.add_parser("local", help="local help"))
-#     parser_list.append(subparsers.add_parser("drive", help="drive help"))
+    LIST = "list"
+    HAS = "has"
+    GET = "get"
+    PUT = "put"
+    SEARCH = "search"
+    FUZZY = "fuzzy"
+    STATUS = "stat"
+    CAPACITY = "cap"
+    CONFIG = "config"
 
-#     for each in parser_list:
-#         each.add_argument("action", choices=["list", "has", "put"])
 
-#     return parser.parse_args()
+ACTIONS = frozenset(action.value for action in Action)
 
 
 def parse_args():
-    args = parse_args_subcommand()
-    if not hasattr(args, "action"):
-        return parse_args_command()
+    if len(sys.argv) < 2:
+        exit(parse_args_empty())  # to show short description
+
+    service_names = api.get_service_names()
+
+    args = set(sys.argv[1:])
+    help = args & set(['-h', '--help'])
+    services = args & set(service_names)
+    actions = args & set(ACTIONS)
+
+    if help and not (services or actions):
+        exit(parse_args_base(service_names))
+
+    if not services:
+        args = parse_args_action()
+        args.service = None
+    else:
+        args = parse_args_service_action(service_names)
+
     return args
 
 
-def parse_args_command():
-    parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(help="command", dest="action")
+def parse_args_empty():
+    """Check for `mm`"""
+    print(SHORT_DESCRIPTION)
+    exit()
 
-    add_global_commands(subparsers)
+
+def base_parser():
+    import argparse
+    parser = argparse.ArgumentParser(prog=COMMAND_NAME, description=DESCRIPTION)
+    logtools.add_log_parser(parser)
+    return parser
+
+
+def parse_args_base(service_names):
+    """Check for `mm (-h, --help)`"""
+    parser = base_parser()
+
+    parser.add_argument("service", nargs="?", help=f"{{{', '.join(service_names)}}} (Optional. From your config file.)")
+    parser.add_argument("action", nargs="?", metavar="action", choices=ACTIONS, help="{%(choices)s}")
+
     return parser.parse_args()
 
 
-def parse_args_subcommand():
-    parser = argparse.ArgumentParser(prog=COMMAND_NAME, description=DESCRIPTION)
-    subparsers = parser.add_subparsers(help="Backup service options", dest="service")
+def parse_args_action():
+    """Check for `mm <action>`"""
+    parser = base_parser()
 
-    subparsers_map = {
-        "local": subparsers.add_parser("local", help="The local filesystem", description=LOCAL_DESCRIPTION),
-        "drive": subparsers.add_parser("drive", help="Google drive", description=DRIVE_DESCRIPTION),
-        "all": subparsers.add_parser("all", help="(All configured services at once)", description=ALL_DESCRIPTION),
-    }
+    action_parsers = parser.add_subparsers(dest="action")
+    add_commands(action_parsers, service=None)
 
-    for subparser in subparsers_map.values():
-        subsubparsers = subparser.add_subparsers(help="command", dest="action")
-        add_service_commands(subsubparsers)
+    return parser.parse_args()
 
-    add_global_commands(subparsers)
+
+def parse_args_service_action(service_names):
+    """Check for `mm <service> [action]`"""
+    parser = base_parser()
+
+    service_parsers = parser.add_subparsers(dest="service")
+    for service_name in service_names:
+        description = f"'{service_name}' {api.get_service_description(service_name)}"
+        service_parser = service_parsers.add_parser(service_name, description=description)
+
+        logtools.add_log_parser(service_parser)
+        service_action_parsers = service_parser.add_subparsers(dest="action")
+        add_commands(service_action_parsers, service=service_name)
+
     args = parser.parse_args()
-
-    if hasattr(args, "action") and not args.action:
-        subparser = subparsers_map[args.service]
-        subparser.print_help()
-        exit()
+    if not args.action:
+        parser.parse_args([args.service, '-h'])
 
     return args
 
 
-def add_global_commands(subparsers):
-    subparsers.add_parser("sync", description="Synchronize all services (if possible)")
-    subparsers.add_parser("list", description=LIST_TEXT_GLOBAL)
-    subparsers.add_parser("has", description=HAS_TEXT_GLOBAL).add_argument("files", nargs="+")
-    subparsers.add_parser("get", description=GET_TEXT_GLOBAL).add_argument("files", nargs="+")
-    subparsers.add_parser("put", description=PUT_TEXT_GLOBAL).add_argument("files", nargs="+")
-    subparsers.add_parser("stat")
-    subparsers.add_parser("cap")
+def add_commands(subparsers, service=None):
+
+    def add_parser(*args, **kwargs):
+        nonlocal subparsers
+        subparser = subparsers.add_parser(*args, **kwargs)
+        logtools.add_log_parser(subparser)
+        return subparser
+
+    if not service:
+        add_parser(Action.SERVICES.value, description=SERVICES_TEXT)
+        add_parser(Action.SYNC.value, description=SYNC_TEXT)
+
+    add_parser(Action.LIST.value, description=f"[{service}] -- {LIST_TEXT_SERVICE}" if service else LIST_TEXT)
+    p_has = add_parser(Action.HAS.value, description=f"[{service}] -- {HAS_TEXT_SERVICE}" if service else HAS_TEXT)
+    p_get = add_parser(Action.GET.value, description=f"[{service}] -- {GET_TEXT_SERVICE}" if service else GET_TEXT)
+    p_put = add_parser(Action.PUT.value, description=f"[{service}] -- {PUT_TEXT_SERVICE}" if service else PUT_TEXT)
+    p_search = add_parser(Action.SEARCH.value, description=f"[{service}] -- {SEARCH_TEXT_SERVICE}" if service else SEARCH_TEXT)
+    p_fuzzy = add_parser(Action.FUZZY.value, description=f"[{service}] -- {FUZZY_TEXT_SERVICE}" if service else FUZZY_TEXT)
+    add_parser(Action.STATUS.value, description=f"[{service}] -- {STATUS_TEXT_SERVICE}" if service else STATUS_TEXT)
+    add_parser(Action.CAPACITY.value, description=f"[{service}] -- {CAPACITY_TEXT_SERVICE}" if service else CAPACITY_TEXT)
+    add_parser(Action.CONFIG.value, description=f"[{service}] -- {CONFIG_TEXT_SERVICE}" if service else CONFIG_TEXT)
+
+    for parser in [p_has, p_get, p_put, p_search, p_fuzzy]:
+        parser.add_argument("files", nargs="+")
 
 
-def add_service_commands(subparsers):
-    subparsers.add_parser("list", help=LIST_TEXT_SERVICE, description=LIST_TEXT_SERVICE)
-    subparsers.add_parser("has", help=HAS_TEXT_SERVICE, description=HAS_TEXT_SERVICE).add_argument("files", nargs="+")
-    subparsers.add_parser("get", help=GET_TEXT_SERVICE, description=GET_TEXT_SERVICE).add_argument("files", nargs="+")
-    subparsers.add_parser("put", help=PUT_TEXT_SERVICE, description=PUT_TEXT_SERVICE).add_argument("files", nargs="+")
-    subparsers.add_parser("stat")
-    subparsers.add_parser("cap")
+def run_services():
+    return api.get_service_names()
+
+
+def run_file_list(results, all_mode=False):
+    from mediaman.core import watertable
+
+    columns = ((("service", 16),) if all_mode else ()) + (("name", 40 + (0 if all_mode else 19)), ("hash", 64), ("id", 36))
+
+    def files_iterator(file_results_list):
+        nonlocal all_mode
+        if not all_mode:
+            for item in file_results_list:
+                yield (item["name"], item["hash"], item["id"])
+        else:
+            for result in file_results_list:
+                if result.response:
+                    for item in result.response:
+                        yield (result.client.name(), item["name"], item["hash"], item["id"])
+
+    gen = watertable.table_stream(columns, files_iterator(results))
+    for row in gen:
+        print(row)
 
 
 def main():
     args = parse_args()
-    # print(args)
+
+    import pathlib
+
+    from mediaman import config
+    from mediaman.core import api
+    from mediaman.core import watertable
 
     root = pathlib.Path(config.load("SAVED_PWD", default="."))
 
-    if not args.action:
-        print(SHORT_DESCRIPTION)
-        return
+    service_selector = args.service
+    all_mode = service_selector == "all"
 
-    if not hasattr(args, "service"):
-        return api.run_global(root, args)
-    elif args.service == "all":
-        return api.run_multi(root, args)
+    file_results_list_funcs = {
+        "list", "search", "fuzzy"
+    }
+
+    if args.action in file_results_list_funcs:
+        if args.action == "list":
+            results = api.run_list(service_selector=service_selector)
+        elif args.action == "search":
+            results = api.run_search(root, *args.files, service_selector=service_selector)
+        elif args.action == "fuzzy":
+            results = api.run_fuzzy(root, *args.files, service_selector=service_selector)
+        else:
+            raise NotImplementedError()
+
+        run_file_list(results, all_mode=all_mode)
+        exit(0)
+
+    if args.action == "config":
+        import pprint
+        print(pprint.pformat(api.run_config(args.service)))
+        exit(0)
+    elif args.action == "services":
+        print(run_services())
+        exit(0)
+    elif args.action == "has":
+        results = api.run_has(root, *args.files, service_selector=service_selector)
+        if service_selector == "all":
+            columns = (("service", 16),) + tuple((file_name, max(3, len(file_name))) for file_name in args.files)
+            it = ((result.client.name(), ("No" if not result.response else "Yes")) for result in results)
+            gen = watertable.table_stream(columns, it)
+            for row in gen:
+                print(row)
+        else:
+            print("Yes" if results else "No")
+            exit(not results)
+            # if results:
+            #     print(results)
+            # else:
+            #     s = 's' if (len(args.files) > 1) else ''
+            #     were = 'were' if (len(args.files) > 1) else 'was'
+            #     print(f"[-] No file{s} with the name{s} {args.files} {were} found.")
+            #     exit(1)
+    elif args.action == "get":
+        results = api.run_get(root, *args.files, service_selector=service_selector)
+        print(repr(results))
+    elif args.action == "put":
+        results = api.run_put(root, *args.files, service_selector=service_selector)
+        if all_mode:
+            for result in results:
+                print(repr(result))
+        else:
+            print(repr(results))
+    elif args.action == "cap":
+        results = api.run_cap(service_selector=service_selector)
+        if service_selector != "all":
+            results = [results]
+        for result in results:
+            print(result)
     else:
-        return api.run_single(root, args)
+        raise NotImplementedError()
 
 
 if __name__ == '__main__':

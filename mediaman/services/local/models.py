@@ -2,6 +2,10 @@
 from mediaman.services.abstract import models
 
 
+class LocalConfig(models.BaseConfig):
+    pass
+
+
 class LocalReceiptFile(models.AbstractReceiptFile):
 
     def __init__(self, filename):
@@ -38,3 +42,20 @@ class LocalResultFileList(models.AbstractResultFileList):
 
     def results(self):
         return list(self.items.values())
+
+
+class LocalResultQuota(models.AbstractResultQuota):
+
+    def __init__(self, capacity_data):
+        self._used = capacity_data["used"]
+        self._quota = capacity_data["quota"]
+        self._total = capacity_data["total"]
+
+    def used(self):
+        return self._used
+
+    def quota(self):
+        return self._quota
+
+    def total(self):
+        return self._total

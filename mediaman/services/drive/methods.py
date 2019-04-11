@@ -1,5 +1,6 @@
 
 import io
+import logging
 
 import apiclient.discovery
 import apiclient.http
@@ -8,38 +9,39 @@ import httplib2
 import oauth2client.client
 import oauth2client.file
 
-from mediaman import config
+from mediaman.core import logtools
+
+logger = logtools.new_logger("mediaman.services.drive.methods")
+
+# This suppresses warnings from googleapiclient, and
+# prevents it from polluting the log files.
+logging.getLogger("googleapiclient.discovery_cache").setLevel(logging.ERROR)
 
 
 OAUTH2_SCOPE = "https://www.googleapis.com/auth/drive"
 
 
-CLIENT_SECRETS = config.load("GOOGLE_CLIENT_SECRETS")
-CREDENTIALS = config.load("GOOGLE_CREDENTIALS")
-DESTINATION = config.load("GOOGLE_DESTINATION")
+def ensure_directory(drive, destination):
+    logger.debug("[ ] Ensuring Google Drive destination...")
 
-
-def ensure_directory(drive):
-    print("[ ] Ensuring Google Drive destination...")
-
-    if not DESTINATION:
+    if not destination:
         # TODO: use logging library
-        print("[+] No directory specified.  Using top-level directory.")
+        logger.debug("[+] No directory specified.  Using top-level directory.")
         return None
 
     folders = drive.files().list(
-        q=f"title='{DESTINATION}' and mimeType='application/vnd.google-apps.folder'",
+        q=f"title='{destination}' and mimeType='application/vnd.google-apps.folder'",
         fields="items(id)",
     ).execute()["items"]
 
     if folders:
         assert len(folders) == 1
         folder_id = folders[0]["id"]
-        print(f"[+] Directory found ({folder_id}).")
+        logger.debug(f"[+] Directory found ({folder_id}).")
         return folder_id
 
     metadata = {
-        'title': DESTINATION,
+        'title': destination,
         'mimeType': 'application/vnd.google-apps.folder'
     }
     folder = drive.files().insert(
@@ -47,30 +49,29 @@ def ensure_directory(drive):
         fields='id',
     ).execute()
     folder_id = folder["id"]
-    print(f"[+] Directory created ({folder_id}).")
+    logger.debug(f"[+] Directory created ({folder_id}).")
 
     return folder["id"]
 
 
-def authenticate():
-    global CLIENT_SECRETS, CREDENTIALS
-    assert CLIENT_SECRETS or CREDENTIALS
+def authenticate(client_secrets, credentials_path):
+    assert client_secrets or credentials_path
 
     credentials = None
-    if CREDENTIALS:
-        storage = oauth2client.file.Storage(CREDENTIALS)
+    if credentials_path:
+        storage = oauth2client.file.Storage(credentials_path)
         credentials = storage.get()
 
     if credentials is None:
         # Perform OAuth2.0 authorization flow.
-        flow = oauth2client.client.flow_from_clientsecrets(CLIENT_SECRETS, OAUTH2_SCOPE)
+        flow = oauth2client.client.flow_from_clientsecrets(client_secrets, OAUTH2_SCOPE)
         flow.redirect_uri = oauth2client.client.OOB_CALLBACK_URN
         authorize_url = flow.step1_get_authorize_url()
         print("Go to the following link in your browser: " + authorize_url)
         code = input("Enter verification code: ").strip()
         credentials = flow.step2_exchange(code)
 
-    if CREDENTIALS:
+    if credentials_path:
         storage.put(credentials)
 
     # Create an authorized Drive API client.
@@ -129,7 +130,7 @@ def upload(drive, request, folder_id=None):
         return upload_update(drive, body, media_body, file_id, folder_id=folder_id)
 
     if len(files) > 1:
-        print("[!] Warning: multiple files exist with this name ({request.id})!  Can't safely replace one!")
+        logger.warning("[!] Warning: multiple files exist with this name ({request.id})!  Can't safely replace one!")
 
     return upload_create(drive, body, media_body, folder_id=folder_id)
 
@@ -163,10 +164,10 @@ def download(drive, request, folder_id=None):
             raise
 
         if download_progress:
-            print(f"[ ] Downloading... {download_progress.progress():.2%}")
+            logger.info(f"[ ] Downloading... {download_progress.progress():.2%}")
 
         if done:
-            print("[+] Download complete.")
+            logger.info("[+] Download complete.")
             break
 
     return {
@@ -190,3 +191,17 @@ def search_by_name(drive, file_name, folder_id=None):
 
     files = request.execute()
     return files
+
+
+def capacity(drive, quota, folder_id=None):
+    capacity_info = drive.about().get().execute()
+    used = int(capacity_info.get("quotaBytesUsed"))
+    total = int(capacity_info.get("quotaBytesTotal"))
+    trashed = int(capacity_info.get("quotaBytesUsedInTrash"))
+
+    return {
+        "used": used,
+        "quota": quota,
+        "total": total,
+        "trashed": trashed,
+    }

@@ -3,13 +3,10 @@ import shutil
 import tempfile
 import zlib
 
-from mediaman.services.abstract import service
+from mediaman.middleware import abstract
 
 
-class CompressionMiddlewareService(service.AbstractService):
-
-    def __init__(self, service):
-        self.service = service
+class CompressionMiddlewareService(abstract.SimpleMiddleware):
 
     def compress(self, file_path):
         tempfile_ref = tempfile.NamedTemporaryFile(mode="wb+")
@@ -31,21 +28,6 @@ class CompressionMiddlewareService(service.AbstractService):
         shutil.move(decompressed_file_path, file_path)
 
         return receipt
-
-    def authenticate(self):
-        self.service.authenticate()
-
-    def list_files(self):
-        return self.service.list_files()
-
-    def list_file(self, file_id):
-        return self.service.list_file(file_id)
-
-    def search_by_name(self, file_name):
-        return self.service.search_by_name(file_name)
-
-    def exists(self, file_id):
-        return self.service.exists(file_id)
 
     def upload(self, request):
         with self.compress(request.path) as compressed_tempfile:

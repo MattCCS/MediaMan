@@ -15,4 +15,5 @@ pycparser==2.18
 PyYAML==3.13
 rsa==3.4.2
 six==1.11.0
+sortedcontainers==2.1.0
 uritemplate==3.0.0

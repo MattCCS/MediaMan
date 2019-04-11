@@ -1,4 +1,5 @@
 
+import functools
 import json
 import pathlib
 import tempfile
@@ -6,6 +7,7 @@ import uuid
 
 from mediaman.core import hashing
 from mediaman.core import models
+from mediaman.core.index import base
 
 
 ERROR_MULTIPLE_REMOTE_INDICES = "\
@@ -13,23 +15,32 @@ ERROR_MULTIPLE_REMOTE_INDICES = "\
 This must be resolved manually.  Exiting..."
 
 
-class IndexManager:
+def init(func):
+    @functools.wraps(func)
+    def wrapped(self, *args, **kwargs):
+        self.init_metadata()
+        return func(self, *args, **kwargs)
+    return wrapped
+
+
+class Index(base.BaseIndex):
 
     INDEX_FILENAME = "index"
 
     def __init__(self, service):
-        self.service = service
+        super().__init__(service)
 
         self.index_id = None
         self.metadata = {}
         self.id_to_metadata_map = {}
         self.hash_to_metadata_map = {}
 
-        self.init_metadata()
-
     def init_metadata(self):
+        if self.index_id is not None:
+            return
+
         # TODO: implement
-        file_list = self.service.search_by_name(IndexManager.INDEX_FILENAME)
+        file_list = self.service.search_by_name(Index.INDEX_FILENAME)
         files = file_list.results()
 
         if len(files) > 1:
@@ -46,7 +57,7 @@ class IndexManager:
             tempfile_ref.seek(0)
 
             request = models.Request(
-                id=IndexManager.INDEX_FILENAME,
+                id=Index.INDEX_FILENAME,
                 path=tempfile_ref.name,
             )
             receipt = self.service.upload(request)
@@ -71,27 +82,42 @@ class IndexManager:
 
         # print(self.metadata)
 
+    @init
     def new_id(self):
         id = str(uuid.uuid4())
         while id in self.id_to_metadata_map:
             id = str(uuid.uuid4())
         return id
 
+    @init
     def get_file_by_hash(self, file_hash):
         return self.metadata[self.hash_to_metadata_map[file_hash]]
 
+    @init
     def list_files(self):
         return iter(self.metadata.values())
 
-    def list_file(self, file_id):
-        return self.metadata[self.id_to_metadata_map[file_id]]
-
+    @init
     def search_by_name(self, file_name):
         return [f for f in self.metadata.values() if f["name"] == file_name]
 
-    def exists(self, file_id):
-        return file_id in self.id_to_metadata_map
+    @init
+    def fuzzy_search_by_name(self, file_name):
+        return [f for f in self.metadata.values() if file_name.lower() in f["name"].lower()]
 
+    # @init
+    # def has_by_uuid(self, file_id):
+    #     return file_id in self.id_to_metadata_map
+
+    @init
+    def has_file(self, file_path):
+        hash = hashing.hash(file_path)
+        try:
+            return self.metadata[self.hash_to_metadata_map[hash]]
+        except KeyError:
+            return False
+
+    @init
     def upload(self, file_path):
         hash = hashing.hash(file_path)
         if hash in self.hash_to_metadata_map:
@@ -111,6 +137,7 @@ class IndexManager:
             "hash": hash,
         })
 
+    @init
     def track_file(self, file):
         new_index = str(max(map(int, self.metadata), default=-1) + 1)
         print(file)
@@ -120,6 +147,7 @@ class IndexManager:
 
         self.update_metadata()
 
+    @init
     def download(self, identifier):
         print(identifier)
 
@@ -141,37 +169,3 @@ class IndexManager:
             return self.service.download(request)
 
         print("[-] No such file found!")
-
-
-class Client:
-
-    def __init__(self, service):
-        self.service = service
-
-        self.index_manager = IndexManager(self.service)
-
-    def get_file_by_hash(self, file_hash):
-        return self.index_manager.get_file_by_hash(file_hash)
-
-    def list_files(self):
-        return list(self.index_manager.list_files())
-
-    def list_file(self, file_id):
-        return self.index_manager.list_file(file_id)
-
-    def has_by_uuid(self, identifier):
-        return self.index_manager.has_by_uuid(identifier)
-
-    def search_by_name(self, file_name):
-        return list(self.index_manager.search_by_name(file_name))
-
-    def exists(self, file_id):
-        return self.index_manager.exists(file_id)
-
-    def upload(self, file_path):
-        return self.index_manager.upload(file_path)
-
-    def download(self, file_path):
-        path = pathlib.Path(file_path)
-        identifier = path.name
-        return self.index_manager.download(identifier)

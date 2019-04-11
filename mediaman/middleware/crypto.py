@@ -1,13 +1,10 @@
 
 import tempfile
 
-from mediaman.services.abstract import service
+from mediaman.middleware import simple
 
 
-class EncryptionMiddlewareService(service.AbstractService):
-
-    def __init__(self, service):
-        self.service = service
+class EncryptionMiddlewareService(simple.SimpleMiddleware):
 
     def encrypt(self, file_path):
         tempfile_ref = tempfile.NamedTemporaryFile(mode="wb+")
@@ -16,21 +13,6 @@ class EncryptionMiddlewareService(service.AbstractService):
             tempfile_ref.write(b"ENCRYPT:" + infile.read())
             tempfile_ref.seek(0)
         return tempfile_ref
-
-    def authenticate(self):
-        self.service.authenticate()
-
-    def list_files(self):
-        return self.service.list_files()
-
-    def list_file(self, file_id):
-        return self.service.list_file(file_id)
-
-    def search_by_name(self, file_name):
-        return self.service.search_by_name(file_name)
-
-    def exists(self, file_id):
-        return self.service.exists(file_id)
 
     def upload(self, request):
         with self.encrypt(request.path) as encrypted_tempfile:

@@ -2,6 +2,14 @@
 from mediaman.services.abstract import models
 
 
+class DriveConfig(models.BaseConfig):
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.client_secrets = self.extra["GOOGLE_CLIENT_SECRETS"]
+        self.credentials = self.extra["GOOGLE_CREDENTIALS"]
+
+
 class DriveReceiptFile(models.AbstractReceiptFile):
 
     def __init__(self, file_data):
@@ -53,3 +61,21 @@ class DriveResultFileList(models.AbstractResultFileList):
 
     def results(self):
         return list(self.items.values())
+
+
+class DriveResultQuota(models.AbstractResultQuota):
+
+    def __init__(self, quota_data):
+        self._used = quota_data["used"]
+        self._quota = quota_data["quota"]
+        self._total = quota_data["total"]
+        self._trashed = quota_data["trashed"]
+
+    def used(self):
+        return self._used
+
+    def quota(self):
+        return self._quota
+
+    def total(self):
+        return self._total

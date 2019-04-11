@@ -1,26 +1,12 @@
-
 import abc
-import functools
 
 from mediaman.services.abstract import models
 
 
-def auth(func):
-    @functools.wraps(func)
-    def wrapped(self, *args, **kwargs):
-        self.authenticate()
-        return func(self, *args, **kwargs)
-    return wrapped
-
-
-class AbstractService(abc.ABC):
-
-    def __init__(self, config: models.BaseConfig):
-        self._config = config
+class AbstractClient(abc.ABC):
 
     @abc.abstractmethod
-    def authenticate(self) -> None:
-        """Authenticate with the service, if necessary."""
+    def name(self) -> str:
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -29,8 +15,8 @@ class AbstractService(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def list_file(self, file_id) -> models.AbstractResultFile:
-        """List the file with the given file ID."""
+    def has(self, root, file_id) -> models.AbstractResultFile:
+        """Return whether a file with that ID exists."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -39,8 +25,8 @@ class AbstractService(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def exists(self, file_id) -> bool:
-        """Return whether a file with that ID exists."""
+    def fuzzy_search_by_name(self, file_name) -> models.AbstractResultFileList:
+        """List all files with a name similar to the given name."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -55,5 +41,5 @@ class AbstractService(abc.ABC):
 
     @abc.abstractmethod
     def capacity(self) -> models.AbstractResultQuota:
-        """Return quota information for this service."""
+        """Return the capacity stats of the service."""
         raise NotImplementedError()
