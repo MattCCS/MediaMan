@@ -6,6 +6,7 @@ class BaseConfig(abc.ABC):
 
     def __init__(self, config):
         self._config = config
+        self.nickname = self._config["nickname"]
         self.type = self._config["type"]
         self.quota = self._config["quota"]
         self.destination = self._config["destination"]
@@ -33,8 +34,12 @@ class AbstractResultFile(abc.ABC):
     def name(self):
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def size(self):
+        raise NotImplementedError()
+
     def __repr__(self):
-        return f"{type(self)}({self.id()}, {self.name()})"
+        return f"{type(self)}({self.id()}, {self.name()}, {self.size()})"
 
 
 class AbstractResultFileList(abc.ABC):

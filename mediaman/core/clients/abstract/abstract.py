@@ -10,6 +10,10 @@ class AbstractClient(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def nickname(self) -> str:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def list_files(self) -> models.AbstractResultFileList:
         """List all files stored with this service."""
         raise NotImplementedError()
@@ -42,4 +46,9 @@ class AbstractClient(abc.ABC):
     @abc.abstractmethod
     def capacity(self) -> models.AbstractResultQuota:
         """Return the capacity stats of the service."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def refresh(self):
+        """Refresh the tracking info of the service."""
         raise NotImplementedError()

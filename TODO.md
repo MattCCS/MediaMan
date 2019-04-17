@@ -19,6 +19,8 @@
 ## Bugs
 - How to handle downloading files with name collisions?
 - Unicode isn't handled by well `list`
+- empty files
+    - Drive can't upload empty files
 
 ## Development
 - Separate out id conversion from metadata?

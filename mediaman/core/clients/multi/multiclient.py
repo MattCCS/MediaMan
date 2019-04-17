@@ -36,3 +36,6 @@ class Multiclient(abstract.AbstractMulticlient):
 
     def capacity(self):
         return gen_all(methods.capacity(self.clients))
+
+    def refresh(self):
+        raise RuntimeError()  # `mm all refresh` isn't allowed

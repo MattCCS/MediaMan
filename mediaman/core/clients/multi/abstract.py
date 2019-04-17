@@ -10,5 +10,8 @@ class AbstractMulticlient(abstract.AbstractClient):
     def name(self):
         return f"{self.__class__.__name__}({'/'.join(c.name() for c in self.clients)})"
 
+    def nickname(self):
+        return f"{self.__class__.__name__}({'/'.join(c.nickname() for c in self.clients)})"
+
     def __repr__(self):
         return f"{self.__class__.__name__}({repr(self.clients)})"

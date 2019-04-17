@@ -36,7 +36,7 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
             for each in result.response:
                 if each["hash"] not in deduped_results:
                     deduped_results[each["hash"]] = each
-                    yield {"id": each["id"], "name": each["name"], "hash": each["hash"]}
+                    yield {"id": each["id"], "name": each["name"], "hash": each["hash"], "size": each["size"]}
 
     def has(self, root, file_id):
         result = list(gen_first_valid(methods.has(self.clients, root, file_id)))
@@ -81,3 +81,21 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
             else:
                 is_partial = True
         return MultiResultQuota(grand_used, grand_allowed, grand_total, is_partial)
+
+    def sync(self):
+        print(self.clients[0])
+        list_files_results = list(gen_all(methods.list_files(self.clients)))
+        capacity_results = list(gen_all(methods.capacity(self.clients)))
+
+        files_by_nickname = {rslt.client.nickname(): {f["hash"]: f for f in rslt.response} for rslt in list_files_results if rslt.response}
+        capacity_by_nickname = {rslt.client.nickname(): rslt.response.allowed() for rslt in capacity_results if rslt.response}
+
+        from mediaman.core.strategies import distribution
+        bins = capacity_by_nickname
+        items = {f["hash"]: f["size"] for fs in files_by_nickname.values() for f in fs.values()}
+        # candidates = ...
+        print(items, bins)
+        return distribution.distribute(bins, items)
+
+    def refresh(self):
+        raise NotImplementedError()  # `mm refresh` not implemented yet

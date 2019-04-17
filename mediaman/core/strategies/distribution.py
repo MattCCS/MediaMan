@@ -118,25 +118,26 @@ def distribute(bins, items):
     # print(f"No presence: {list((i, items[i]) for (i, v) in pres.items() if not v)}")
 
 
-# distribute({'drive': 10, 'local': 20, 'net': 200}, {'a': 113, 'b': 118, 'c': 25, 'd': 4, 'e': 4, 'f': 6})
-import random
-KB = 1024**1
-MB = 1024**2
-GB = 1024**3
+def test():
+    # distribute({'drive': 10, 'local': 20, 'net': 200}, {'a': 113, 'b': 118, 'c': 25, 'd': 4, 'e': 4, 'f': 6})
+    import random
+    KB = 1024**1
+    MB = 1024**2
+    GB = 1024**3
 
-import cProfile
-profile = cProfile.Profile()
-profile.disable()
+    import cProfile
+    profile = cProfile.Profile()
+    profile.disable()
 
-bins = {'net': 400 * GB, 'drive': 100 * GB, 'local': 20 * GB, 'dropbox': 20 * GB, 'b1': 20 * GB, 'b2': 20 * GB, 'b3': 20 * GB}
-items = {str(random.random()): random.randint(1 * KB, 1 * MB) for i in range(100000)}
+    bins = {'net': 400 * GB, 'drive': 100 * GB, 'local': 20 * GB, 'dropbox': 20 * GB, 'b1': 20 * GB, 'b2': 20 * GB, 'b3': 20 * GB}
+    items = {str(random.random()): random.randint(1 * KB, 1 * MB) for i in range(100000)}
 
-# profile.enable()
-distribute(bins, items)
-profile.disable()
+    # profile.enable()
+    distribute(bins, items)
+    profile.disable()
 
-# profile.print_stats()
+    # profile.print_stats()
 
-# distribute(
-#     dict(zip('123', (5, 11, 23))),
-#     dict(zip('ABCD', (2, 4, 8, 16))))
+    # distribute(
+    #     dict(zip('123', (5, 11, 23))),
+    #     dict(zip('ABCD', (2, 4, 8, 16))))

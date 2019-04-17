@@ -44,6 +44,7 @@ class Policy:
     def load_service_config(self, nickname, service_config):
         service_type = services_loader.ServiceType(service_config["type"])
         config_data = {
+            "nickname": nickname,
             "type": service_type,
             "quota": validation.parse_human_bytes(service_config["quota"]),
             "destination": service_config["destination"],

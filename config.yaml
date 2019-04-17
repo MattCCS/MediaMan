@@ -27,7 +27,7 @@
 services:
   drive:
     type: google drive
-    quota: 90GB
+    quota: 180GB
     destination: MediaMan
     extra:
       GOOGLE_CLIENT_SECRETS: credentials/drive/client-secrets/client-secret.json

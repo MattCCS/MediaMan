@@ -5,9 +5,12 @@ import pathlib
 import tempfile
 import uuid
 
+from mediaman.core import logtools
 from mediaman.core import hashing
 from mediaman.core import models
 from mediaman.core.index import base
+
+logger = logtools.new_logger("mediaman.core.index.index")
 
 
 ERROR_MULTIPLE_REMOTE_INDICES = "\
@@ -21,6 +24,16 @@ def init(func):
         self.init_metadata()
         return func(self, *args, **kwargs)
     return wrapped
+
+
+def create_file(id, name, sid, hash, size):
+    return {
+        "id": id,
+        "name": name,
+        "sid": sid,
+        "hash": hash,
+        "size": size,
+    }
 
 
 class Index(base.BaseIndex):
@@ -64,7 +77,7 @@ class Index(base.BaseIndex):
 
         self.index_id = receipt.id()
 
-    def load_metadata(self, index):
+    def load_metadata_json(self, index):
         self.index_id = index.id()
 
         with tempfile.NamedTemporaryFile("w+", delete=True) as tempfile_ref:
@@ -76,9 +89,12 @@ class Index(base.BaseIndex):
             self.service.download(request)
             tempfile_ref.seek(0)
 
-            self.metadata = json.loads(tempfile_ref.read())
-            self.id_to_metadata_map = {v["id"]: k for (k, v) in self.metadata.items()}
-            self.hash_to_metadata_map = {v["hash"]: k for (k, v) in self.metadata.items()}
+            return json.loads(tempfile_ref.read())
+
+    def load_metadata(self, index):
+        self.metadata = self.load_metadata_json(index)
+        self.id_to_metadata_map = {v["id"]: k for (k, v) in self.metadata.items()}
+        self.hash_to_metadata_map = {v["hash"]: k for (k, v) in self.metadata.items()}
 
         # print(self.metadata)
 
@@ -121,7 +137,7 @@ class Index(base.BaseIndex):
     def upload(self, file_path):
         hash = hashing.hash(file_path)
         if hash in self.hash_to_metadata_map:
-            print(f"    [*] (File already indexed: {file_path})")
+            logger.info(f"    [*] (File already indexed: {file_path})")
             return self.get_file_by_hash(hash)
 
         request = models.Request(
@@ -130,17 +146,18 @@ class Index(base.BaseIndex):
         )
         receipt = self.service.upload(request)
 
-        self.track_file({
-            "id": request.id,
-            "name": pathlib.Path(request.path).name,
-            "sid": receipt.id(),
-            "hash": hash,
-        })
+        self.track_file(create_file(
+            request.id,
+            pathlib.Path(request.path).name,
+            receipt.id(),
+            hash,
+            receipt.size(),
+        ))
 
     @init
     def track_file(self, file):
         new_index = str(max(map(int, self.metadata), default=-1) + 1)
-        print(file)
+        logger.debug(file)
         self.metadata[new_index] = file
         self.id_to_metadata_map[file["id"]] = new_index
         self.hash_to_metadata_map[file["hash"]] = new_index
@@ -149,7 +166,7 @@ class Index(base.BaseIndex):
 
     @init
     def download(self, identifier):
-        print(identifier)
+        logger.debug(identifier)
 
         if identifier in self.id_to_metadata_map:
             metadata = self.list_file(identifier)
@@ -168,4 +185,41 @@ class Index(base.BaseIndex):
             )
             return self.service.download(request)
 
-        print("[-] No such file found!")
+        logger.error("[-] No such file found!")
+
+    def refresh(self):
+        metadata = self.load_metadata_json(self.service.search_by_name(Index.INDEX_FILENAME).results()[0])
+        sid_to_metadata = {f["sid"]: f for f in metadata.values()}
+
+        current_files = self.service.list_files().results()
+        new_files = []
+        for current_file in current_files:
+
+            # NOTE: we're listing raw files!
+            sid = current_file.id()
+            id = current_file.name()
+            size = current_file.size()
+            logger.debug(f"current_file: {current_file}")
+
+            try:
+                file_metadata = sid_to_metadata[sid]
+            except KeyError:
+                # TODO: MUST HANDLE THIS!
+                # This will occur for "index", but also for
+                # new/lost files.  Have to track them sanely.
+                logger.warn(f"Couldn't find metadata for sid '{sid}': {current_file}")
+                continue
+
+            name = file_metadata["name"]
+            hash = file_metadata["hash"]
+
+            new_file = create_file(id, name, sid, hash, size)
+            new_files.append(new_file)
+            logger.debug(new_file)
+
+        new_metadata = {str(i): v for (i, v) in dict(enumerate(new_files)).items()}
+        logger.info(f"Old metadata: {metadata}")
+        logger.info(f"New metadata: {new_metadata}")
+
+        self.metadata = new_metadata
+        self.update_metadata()

@@ -10,5 +10,8 @@ class AbstractSingleClient(abstract.AbstractClient):
     def name(self):
         return self.index.name()
 
+    def nickname(self):
+        return self.index.nickname()
+
     def __repr__(self):
         return f"{self.__class__.__name__}({repr(self.index)})"
