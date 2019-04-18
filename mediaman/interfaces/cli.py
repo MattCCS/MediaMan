@@ -254,22 +254,35 @@ def main():
     elif args.action == "has":
         all_results = api.run_has(root, *args.files, service_selector=service_selector)
 
-        for (file_name, results) in zip(args.files, all_results):
+        service_names = sorted(set(api.get_service_names()) - set(["all"]))
+        max_filename = max(map(len, args.files))
 
-            if service_selector == "all":
-                columns = (("service", 16), (file_name, max(3, len(file_name))))
-                it = ((result.client.name(), ("No" if not result.response else "Yes")) for result in results)
-                gen = watertable.table_stream(columns, it)
+        columns = (("name", max(4, max_filename)),)
+        if all_mode:
+            columns += tuple((service, len(service)) for service in service_names)
+        else:
+            columns += (("found?", 6),)
 
-                print(f"'{file_name}':")
-                for row in gen:
-                    print(row)
+        print(columns)
+
+        def inverted_iter(services, files, all_results, all_mode=False):
+            if all_mode:
+                for (file_name, results) in zip(files, all_results):
+                    service_map = {result.client.nickname(): ("No" if not result.response else "Yes") for result in results}
+                    yield (file_name,) + tuple(service_map[service] for service in services)
 
             else:
-                # raise NotImplementedError()
-                res = "Yes" if results else "No"
-                print(f"'{file_name}': {res}")
-                # exit(not all_results)
+                results = all_results
+                for (file_name, result) in zip(files, results):
+                    yield (file_name, ("No" if not result else "Yes"))
+
+        gen = watertable.table_stream(columns, inverted_iter(
+            service_names, args.files, all_results, all_mode=all_mode))
+
+        for row in gen:
+            print(row)
+
+        # exit(1)
 
         # if results:
         #     print(results)
@@ -282,12 +295,15 @@ def main():
         results = api.run_get(root, *args.files, service_selector=service_selector)
         print(repr(results))
     elif args.action == "put":
-        results = api.run_put(root, *args.files, service_selector=service_selector)
+        all_results = api.run_put(root, *args.files, service_selector=service_selector)
         if all_mode:
+            for results in all_results:
+                for result in results:
+                    print(repr(result))
+        else:
+            results = all_results
             for result in results:
                 print(repr(result))
-        else:
-            print(repr(results))
     elif args.action == "cap":
         results = api.run_cap(service_selector=service_selector)
         if service_selector != "all":

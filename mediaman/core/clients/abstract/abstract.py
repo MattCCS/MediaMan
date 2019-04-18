@@ -19,7 +19,7 @@ class AbstractClient(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def has(self, root, file_id) -> models.AbstractResultFile:
+    def has(self, file_id) -> models.AbstractResultFile:
         """Return whether a file with that ID exists."""
         raise NotImplementedError()
 

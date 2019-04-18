@@ -19,8 +19,8 @@ class Multiclient(abstract.AbstractMulticlient):
     def list_files(self):
         return gen_all(methods.list_files(self.clients))
 
-    def has(self, root, file_id):
-        return gen_all(methods.has(self.clients, root, file_id))
+    def has(self, file_id):
+        return gen_all(methods.has(self.clients, file_id))
 
     def search_by_name(self, file_name):
         return gen_all(methods.search_by_name(self.clients, file_name))

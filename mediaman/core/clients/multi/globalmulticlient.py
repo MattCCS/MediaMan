@@ -38,8 +38,8 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
                     deduped_results[each["hash"]] = each
                     yield {"id": each["id"], "name": each["name"], "hash": each["hash"], "size": each["size"]}
 
-    def has(self, root, file_id):
-        result = list(gen_first_valid(methods.has(self.clients, root, file_id)))
+    def has(self, file_path):
+        result = list(gen_first_valid(methods.has(self.clients, file_path)))
         return result[0] if result else False
 
     def search_by_name(self, file_name):

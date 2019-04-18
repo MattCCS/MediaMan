@@ -23,11 +23,8 @@ class SingleClient(abstract.AbstractSingleClient):
     def list_files(self):
         return list(self.index.list_files())
 
-    def has(self, root, file_id):
-        abs_path = resolve_abs_path(root, file_id)
-        if abs_path:
-            return self.index.has_file(abs_path)
-        raise FileNotFoundError()
+    def has(self, file_path):
+        return self.index.has_file(file_path)
 
         # elif validation.is_valid_uuid(file_id):
         #     return self.index.has_uuid(file_id)
@@ -40,11 +37,8 @@ class SingleClient(abstract.AbstractSingleClient):
     def fuzzy_search_by_name(self, file_name):
         return list(self.index.fuzzy_search_by_name(file_name))
 
-    def upload(self, root, file_path):
-        abs_path = resolve_abs_path(root, file_path)
-        if abs_path:
-            return self.index.upload(abs_path)
-        raise FileNotFoundError()
+    def upload(self, file_path):
+        return self.index.upload(file_path)
 
     def download(self, file_id):
         return [self.index.download(file_id)]

@@ -6,6 +6,10 @@ class AbstractSingleClient(abstract.AbstractClient):
 
     def __init__(self, index):
         self.index = index
+        self.force_init()
+
+    def force_init(self):
+        self.index.force_init()
 
     def name(self):
         return self.index.name()

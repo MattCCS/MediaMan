@@ -1,6 +1,7 @@
 
 import functools
 import json
+import os
 import pathlib
 import tempfile
 import uuid
@@ -42,11 +43,15 @@ class Index(base.BaseIndex):
 
     def __init__(self, service):
         super().__init__(service)
+        logger.debug(f"Index init for {service}")
 
         self.index_id = None
         self.metadata = {}
         self.id_to_metadata_map = {}
         self.hash_to_metadata_map = {}
+
+    def force_init(self):
+        self.init_metadata()
 
     def init_metadata(self):
         if self.index_id is not None:
@@ -75,9 +80,11 @@ class Index(base.BaseIndex):
             )
             receipt = self.service.upload(request)
 
+        logger.debug(f"update_metadata receipt: {receipt}")
         self.index_id = receipt.id()
 
     def load_metadata_json(self, index):
+        logger.debug(f"load_metadata_json index: {index}")
         self.index_id = index.id()
 
         with tempfile.NamedTemporaryFile("w+", delete=True) as tempfile_ref:
@@ -151,8 +158,10 @@ class Index(base.BaseIndex):
             pathlib.Path(request.path).name,
             receipt.id(),
             hash,
-            receipt.size(),
+            os.stat(request.path).st_size,
         ))
+
+        return self.get_file_by_hash(hash)
 
     @init
     def track_file(self, file):
