@@ -1,5 +1,6 @@
 
-from typing import Mapping
+import copy
+from typing import Mapping, Set
 
 import sortedcontainers
 
@@ -38,7 +39,10 @@ def human_bytes(n):
     return f"{n:.2f}{abbrev}"
 
 
-def fast_optimal(bins: Mapping[str, int], items: Mapping[str, int]):
+def fast_optimal(
+        bins: Mapping[str, int],
+        items: Mapping[str, int],
+        distribution: Mapping[str, Set[str]]=None):
     """
     Assign a near-optimal distribution of items to bins, quickly.
 
@@ -47,20 +51,22 @@ def fast_optimal(bins: Mapping[str, int], items: Mapping[str, int]):
     @return distribution Mapping of bin identifier to set of item identifiers
     """
 
-    distribution = {k: set() for k in bins}
+    distribution = {k: set() for k in bins} if not distribution else distribution
 
     bin_queue = sortedcontainers.SortedList(key=lambda bin: bin.n)
     bin_queue.update(Bin(k, v) for k, v in bins.items())
-    print(bin_queue)
+    # print(bin_queue)
 
     items_queue = sorted((Item(k, v) for k, v in items.items()), key=lambda item: item.n)
+    # print(items_queue)
 
     while items_queue:
+        no_change = True
         trim_items = 0
 
         if items_queue[0].n > bin_queue[-1].n:
             print(f"All remaining items too large for bins.")
-            print(items_queue[0], bin_queue[-1])
+            # print(items_queue[0], bin_queue[-1])
             break
 
         for item in reversed(items_queue):
@@ -69,15 +75,19 @@ def fast_optimal(bins: Mapping[str, int], items: Mapping[str, int]):
                 bin = bin_queue.pop(bin_queue.bisect_left(item))
             except IndexError:
                 # item is too large for any bin
+                no_change = False
                 trim_items += 1
                 continue
 
-            if item.id in distribution[bin.id]:
-                continue
+            if item.id not in distribution[bin.id]:
+                distribution[bin.id].add(item.id)
+                bin = Bin(bin.id, bin.n - item.n)
+                no_change = False
 
-            distribution[bin.id].add(item.id)
-            bin = Bin(bin.id, bin.n - item.n)
             bin_queue.add(bin)
+
+        if no_change:
+            break
 
         if trim_items:
             items_queue = items_queue[:-trim_items]
@@ -85,7 +95,12 @@ def fast_optimal(bins: Mapping[str, int], items: Mapping[str, int]):
     return distribution
 
 
-def distribute(bins, items):
+def distribute(bins, items, distribution=None):
+    bins = copy.deepcopy(bins)
+    items = copy.deepcopy(items)
+    if distribution is not None:
+        distribution = copy.deepcopy(distribution)
+
     total = []
 
     total_size = sum(size for size in items.values())
@@ -97,13 +112,14 @@ def distribute(bins, items):
             bin = (bin_id, bin_cap - total_size)
             total.append(bin)
             del bins[bin_id]
+            del distribution[bin_id]
     print(list((bin_id, human_bytes(bin_cap)) for bin_id, bin_cap in total))
 
     if not bins:
         print("distribution not necessary!")
         return
 
-    dist = fast_optimal(bins, items)
+    dist = fast_optimal(bins, items, distribution=distribution)
     dist.update({bin[0]: set(items) for bin in total})
     # print(dist)
 
@@ -116,6 +132,8 @@ def distribute(bins, items):
     print(f"redundancy: {redundancy}")
     print(f"availability: {availability}")
     # print(f"No presence: {list((i, items[i]) for (i, v) in pres.items() if not v)}")
+
+    return dist
 
 
 def test():

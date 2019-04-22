@@ -6,7 +6,7 @@ class AbstractSingleClient(abstract.AbstractClient):
 
     def __init__(self, index):
         self.index = index
-        self.force_init()
+        # self.force_init()
 
     def force_init(self):
         self.index.force_init()

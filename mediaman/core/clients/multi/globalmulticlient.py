@@ -1,7 +1,11 @@
 
+from mediaman import config
+from mediaman.core import logtools
 from mediaman.core.clients.multi import abstract
 from mediaman.core.clients.multi import methods
 from mediaman.core.models import MultiResultQuota
+
+logger = logtools.new_logger("mediaman.core.clients.multi.globalmulticlient")
 
 
 def gen_first_valid(gen):
@@ -28,7 +32,29 @@ def gen_all(gen):
         pass
 
 
+RESOLUTION_ORDER_KEY = "resolution-order"
+
+
 class GlobalMulticlient(abstract.AbstractMulticlient):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._resolution_order = config.load(RESOLUTION_ORDER_KEY)
+        self.sort_by_resolution_order()
+
+    def sort_by_resolution_order(self):
+        if not self._resolution_order:
+            logger.warn(f"No '{RESOLUTION_ORDER_KEY}' key found in config file.")
+            return
+
+        logger.debug(f"'{RESOLUTION_ORDER_KEY}' key found: {self._resolution_order}")
+
+        temp_clients = {c.nickname(): c for c in self.clients}
+        self.clients = [
+            temp_clients.pop(nn)
+            for nn in self._resolution_order
+            if nn in temp_clients
+        ] + list(temp_clients.values())
 
     def list_files(self):
         deduped_results = {}
@@ -93,9 +119,19 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
         from mediaman.core.strategies import distribution
         bins = capacity_by_nickname
         items = {f["hash"]: f["size"] for fs in files_by_nickname.values() for f in fs.values()}
-        # candidates = ...
-        print(items, bins)
-        return distribution.distribute(bins, items)
+        print(len(items))
+
+        dist = {nickname: set(hash for hash in files) for (nickname, files) in files_by_nickname.items()}
+        new_dist = distribution.distribute(bins, items, distribution=dist)
+
+        for nickname in dist:
+            v1 = dist[nickname]
+            v2 = new_dist[nickname]
+            print(nickname, len(v1), len(v2), (v1 - v2), (v2 - v1))
+
+        # import json
+        # print(json.dumps({k: list(v) for (k, v) in dist.items()}, indent=4))
+        # print(json.dumps({k: list(v) for (k, v) in new_dist.items()}, indent=4))
 
     def refresh(self):
         raise NotImplementedError()  # `mm refresh` not implemented yet

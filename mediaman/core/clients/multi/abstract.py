@@ -7,7 +7,7 @@ class AbstractMulticlient(abstract.AbstractClient):
 
     def __init__(self, clients):
         self.clients = clients
-        self.force_init()
+        # self.force_init()
 
     def force_init(self):
         return methods.force_init(self.clients)

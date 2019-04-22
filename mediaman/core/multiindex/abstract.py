@@ -38,3 +38,6 @@ class AbstractMultiIndex(abc.ABC):
 
     def refresh(self):
         return self.client.refresh()
+
+    def sync(self):
+        return self.client.sync()

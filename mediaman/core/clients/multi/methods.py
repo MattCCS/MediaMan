@@ -10,6 +10,18 @@ from mediaman.core import models
 logger = logtools.new_logger("mediaman.core.clients.multi.methods")
 
 
+def apply_consecutive(clients, func_name, *args, **kwargs):
+    for client in clients:
+        try:
+            result = getattr(client, func_name)(*args, **kwargs)
+            go = yield models.Response(client, result, None)
+        except Exception as exc:
+            go = yield models.Response(client, None, exc)
+
+        if not go:
+            return
+
+
 def multi_apply_concurrent(clients, func_name, *args, **kwargs):
     """
     WARNING: will finish all execution before garbage collection.
@@ -65,24 +77,24 @@ def force_init(clients):
 
 
 def list_files(clients) -> Iterable[models.Response]:
-    return multi_apply_concurrent(clients, "list_files")
+    return apply_consecutive(clients, "list_files")
 
 
 def has(clients, file_path) -> Iterable[models.Response]:
-    return multi_apply_concurrent(clients, "has", file_path)
+    return apply_consecutive(clients, "has", file_path)
 
 
 def search_by_name(clients, file_name) -> Iterable[models.Response]:
-    return multi_apply_concurrent(clients, "search_by_name", file_name)
+    return apply_consecutive(clients, "search_by_name", file_name)
 
 
 def fuzzy_search_by_name(clients, file_name) -> Iterable[models.Response]:
-    return multi_apply_concurrent(clients, "fuzzy_search_by_name", file_name)
+    return apply_consecutive(clients, "fuzzy_search_by_name", file_name)
 
 
 def upload(clients, file_path) -> Iterable[models.Response]:
-    return multi_apply_concurrent(clients, "upload", file_path)
+    return apply_consecutive(clients, "upload", file_path)
 
 
 def capacity(clients) -> Iterable[models.Response]:
-    return multi_apply_concurrent(clients, "capacity")
+    return apply_consecutive(clients, "capacity")
