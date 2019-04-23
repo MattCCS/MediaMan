@@ -1,8 +1,11 @@
 
 from mediaman import config
 from mediaman.core import loader
+from mediaman.core import logtools
 from mediaman.core import validation
 from mediaman.services import loader as services_loader
+
+logger = logtools.new_logger("mediaman.core.policy")
 
 
 __all__ = [
@@ -61,12 +64,19 @@ class Policy:
         return service
 
     def load_all_services(self):
+        failures = []
         for nickname in self.nickname_to_config:
             try:
                 yield self.load_service(nickname)
             except Exception as exc:
                 import traceback
-                print(f"Failed to load service '{nickname}': {traceback.format_exc()}")
+                # NOTE: Failure to load a service is expected.
+                #       Perhaps a custom error should be thrown
+                failures.append(nickname)
+                logger.debug(traceback.format_exc())
+
+        if failures:
+            logger.warn(f"Failed to load some services: {', '.join(failures)}")
 
     def load_client(self, service_selector):
         if service_selector is None:

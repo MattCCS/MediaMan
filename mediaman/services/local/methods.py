@@ -65,6 +65,7 @@ def upload(destination_path, request):
 
 def download(destination_path, request):
     # TODO: check for overwriting?
+    # TODO: write in chunks?
     source_file_path = destination_path / request.id
     with open(source_file_path, "rb") as infile:
         with open(request.path, "wb") as outfile:

@@ -19,10 +19,10 @@ def human_bytes(n):
 
 class Request:
 
-    def __init__(self, id=None, path=None):
-        assert id and path
+    def __init__(self, id=None, path=None, hash=None):
         self._id = id
         self._path = path
+        self._hash = hash
 
     @property
     def id(self):
@@ -39,6 +39,14 @@ class Request:
     @path.setter
     def path(self, value):
         self._path = value
+
+    @property
+    def hash(self):
+        return self._hash
+
+    @hash.setter
+    def hash(self, value):
+        self._hash = value
 
 
 class Response:

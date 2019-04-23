@@ -113,8 +113,12 @@ class Index(base.BaseIndex):
         return id
 
     @init
-    def get_file_by_hash(self, file_hash):
-        return self.metadata[self.hash_to_metadata_map[file_hash]]
+    def get_metadata_by_hash(self, hash):
+        return self.metadata[self.hash_to_metadata_map[hash]]
+
+    @init
+    def get_metadata_by_uuid(self, uuid):
+        return self.metadata[self.id_to_metadata_map[uuid]]
 
     @init
     def list_files(self):
@@ -128,28 +132,28 @@ class Index(base.BaseIndex):
     def fuzzy_search_by_name(self, file_name):
         return [f for f in self.metadata.values() if file_name.lower() in f["name"].lower()]
 
-    # @init
-    # def has_by_uuid(self, file_id):
-    #     return file_id in self.id_to_metadata_map
+    @init
+    def has_hash(self, hash):
+        return hash in self.hash_to_metadata_map
 
     @init
-    def has_file(self, file_path):
-        hash = hashing.hash(file_path)
-        try:
-            return self.metadata[self.hash_to_metadata_map[hash]]
-        except KeyError:
-            return False
+    def has_uuid(self, uuid):
+        return uuid in self.id_to_metadata_map
 
     @init
-    def upload(self, file_path):
-        hash = hashing.hash(file_path)
-        if hash in self.hash_to_metadata_map:
-            logger.info(f"    [*] (File already indexed: {file_path})")
-            return self.get_file_by_hash(hash)
+    def has_name(self, name):
+        return self.search_by_name(name)
+
+    @init
+    def upload(self, request):
+        hash = request.hash
+        if self.has_hash(hash):
+            logger.info(f"    [*] (File already indexed: {request.path})")
+            return self.get_metadata_by_hash(hash)
 
         request = models.Request(
             id=self.new_id(),
-            path=file_path,
+            path=request.path,
         )
         receipt = self.service.upload(request)
 
@@ -161,7 +165,7 @@ class Index(base.BaseIndex):
             os.stat(request.path).st_size,
         ))
 
-        return self.get_file_by_hash(hash)
+        return self.get_metadata_by_hash(hash)
 
     @init
     def track_file(self, file):
@@ -174,27 +178,29 @@ class Index(base.BaseIndex):
         self.update_metadata()
 
     @init
-    def download(self, identifier):
-        logger.debug(identifier)
+    def download(self, root, identifier):
+        logger.debug(f"Download request for: '{identifier}' to '{root}'...")
 
-        if identifier in self.id_to_metadata_map:
-            metadata = self.list_file(identifier)
-            request = models.Request(
-                id=metadata["sid"],
-                path=metadata["name"],
-            )
-            return self.service.download(request)
+        if self.has_uuid(identifier):
+            metadata = self.get_metadata_by_uuid(identifier)
+        elif self.has_hash(identifier):
+            metadata = self.get_metadata_by_hash(identifier)
+        else:
+            metadatas = self.search_by_name(identifier)
+            if not metadatas:
+                logger.error("[-] No such file found!")
+                return None
+            elif len(metadatas) > 1:
+                logger.error("[-] Multiple files exist with that name!  Pass the hash or ID instead.")
+                return False
+            else:
+                metadata = metadatas[0]
 
-        metadatas = self.search_by_name(identifier)
-        if metadatas:
-            metadata = metadatas[0]
-            request = models.Request(
-                id=metadata["sid"],
-                path=metadata["name"],
-            )
-            return self.service.download(request)
-
-        logger.error("[-] No such file found!")
+        request = models.Request(
+            id=metadata["sid"],
+            path=root / metadata["name"],
+        )
+        return self.service.download(request)
 
     def refresh(self):
         metadata = self.load_metadata_json(self.service.search_by_name(Index.INDEX_FILENAME).results()[0])

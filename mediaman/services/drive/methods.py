@@ -188,10 +188,10 @@ def download(drive, request, folder_id=None):
             raise
 
         if download_progress:
-            logger.info(f"[ ] Downloading... {download_progress.progress():.2%}")
+            logger.debug(f"[ ] Downloading... {download_progress.progress():.2%}")
 
         if done:
-            logger.info("[+] Download complete.")
+            logger.debug("[+] Download complete.")
             break
 
     return {

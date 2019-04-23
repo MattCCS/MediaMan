@@ -39,7 +39,7 @@ class AbstractClient(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def download(self, request) -> models.AbstractReceiptFile:
+    def download(self, root, request) -> models.AbstractReceiptFile:
         """Download the file(s) described by the given request."""
         raise NotImplementedError()
 

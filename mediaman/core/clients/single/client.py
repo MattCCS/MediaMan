@@ -1,6 +1,8 @@
 
 import pathlib
 
+from mediaman.core import hashing
+from mediaman.core import validation
 from mediaman.core.clients.single import abstract
 
 
@@ -23,13 +25,22 @@ class SingleClient(abstract.AbstractSingleClient):
     def list_files(self):
         return list(self.index.list_files())
 
-    def has(self, file_path):
-        return self.index.has_file(file_path)
+    def has(self, request):
+        hash = request.hash
+        return self.index.has_hash(hash)
 
-        # elif validation.is_valid_uuid(file_id):
-        #     return self.index.has_uuid(file_id)
-        # elif validation.is_valid_sha256(file_id):
-        #     return self.index.has_hash(file_id)
+    def has_hash(self, hash):
+        if validation.is_valid_sha256(hash):
+            return self.index.has_hash(hash)
+        raise RuntimeError("invalid hash")
+
+    def has_uuid(self, uuid):
+        if validation.is_valid_uuid(uuid):
+            return self.index.has_uuid(uuid)
+        raise RuntimeError("invalid uuid")
+
+    def has_name(self, name):
+        return self.index.has_name(name)
 
     def search_by_name(self, file_name):
         return list(self.index.search_by_name(file_name))
@@ -37,11 +48,11 @@ class SingleClient(abstract.AbstractSingleClient):
     def fuzzy_search_by_name(self, file_name):
         return list(self.index.fuzzy_search_by_name(file_name))
 
-    def upload(self, file_path):
-        return self.index.upload(file_path)
+    def upload(self, request):
+        return self.index.upload(request)
 
-    def download(self, file_id):
-        return [self.index.download(file_id)]
+    def download(self, root, file_id):
+        return [self.index.download(root, file_id)]
 
     def capacity(self):
         return self.index.capacity()

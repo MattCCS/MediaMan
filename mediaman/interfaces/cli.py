@@ -235,9 +235,9 @@ def main():
         if args.action == "list":
             results = [api.run_list(service_selector=service_selector)]
         elif args.action == "search":
-            results = api.run_search(root, *args.files, service_selector=service_selector)
+            results = api.run_search(*args.files, service_selector=service_selector)
         elif args.action == "fuzzy":
-            results = api.run_fuzzy(root, *args.files, service_selector=service_selector)
+            results = api.run_fuzzy(*args.files, service_selector=service_selector)
         else:
             raise NotImplementedError()
 
@@ -263,13 +263,11 @@ def main():
         else:
             columns += (("found?", 6),)
 
-        print(columns)
-
         def inverted_iter(services, files, all_results, all_mode=False):
             if all_mode:
                 for (file_name, results) in zip(files, all_results):
                     service_map = {result.client.nickname(): ("No" if not result.response else "Yes") for result in results}
-                    yield (file_name,) + tuple(service_map[service] for service in services)
+                    yield (file_name,) + tuple(service_map.get(service, "--") for service in services)
 
             else:
                 results = all_results
@@ -293,7 +291,8 @@ def main():
         #     exit(1)
     elif args.action == "get":
         results = api.run_get(root, *args.files, service_selector=service_selector)
-        print(repr(results))
+        for result in results:
+            print(repr(result))
     elif args.action == "put":
         all_results = api.run_put(root, *args.files, service_selector=service_selector)
         if all_mode:

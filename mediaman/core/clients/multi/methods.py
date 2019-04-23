@@ -84,6 +84,18 @@ def has(clients, file_path) -> Iterable[models.Response]:
     return apply_consecutive(clients, "has", file_path)
 
 
+def has_hash(clients, hash) -> Iterable[models.Response]:
+    return apply_consecutive(clients, "has_hash", hash)
+
+
+def has_uuid(clients, uuid) -> Iterable[models.Response]:
+    return apply_consecutive(clients, "has_uuid", uuid)
+
+
+def has_name(clients, name) -> Iterable[models.Response]:
+    return apply_consecutive(clients, "has_name", name)
+
+
 def search_by_name(clients, file_name) -> Iterable[models.Response]:
     return apply_consecutive(clients, "search_by_name", file_name)
 
