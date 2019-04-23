@@ -1,4 +1,9 @@
 
+import contextlib
+import pathlib
+import shutil
+import tempfile
+
 from mediaman import config
 from mediaman.core import logtools
 from mediaman.core import validation
@@ -43,6 +48,15 @@ def sort_by_resolution_order(names, resolution_order):
         for name in resolution_order
         if name in temp_names
     ] + list(temp_names)
+
+
+@contextlib.contextmanager
+def make_temp_directory():
+    temp_dir = tempfile.mkdtemp()
+    try:
+        yield temp_dir
+    finally:
+        shutil.rmtree(temp_dir)
 
 
 class GlobalMulticlient(abstract.AbstractMulticlient):
@@ -198,12 +212,15 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
             logger.info("Nothing to add.")
             return
 
-        raise NotImplementedError()
         for hash in add:
-            root = ...  # tempfile!
-            download = self.download(root, hash)
-            upload = client.upload(download)
-            logger.info(f"Uploaded {upload}")
+            with make_temp_directory() as temp_dir:
+                root = pathlib.Path(temp_dir)
+                logger.info(root)
+                download = self.download(root, hash)
+                logger.info(f"dl: {download}")
+                exit(1)
+                upload = client.upload(download)
+                logger.info(f"Uploaded: {upload}")
 
     def refresh(self):
         raise NotImplementedError()  # `mm refresh` not implemented yet
