@@ -36,6 +36,30 @@ services:
     type: folder
     quota: 20GB
     destination: local-storage
+  128a:
+    type: folder
+    quota: 127GB
+    destination: /Volumes/128GB-alpha/MediaMan
+  128b:
+    type: folder
+    quota: 127GB
+    destination: /Volumes/128GB-beta/MediaMan
+  64a:
+    type: folder
+    quota: 63GB
+    destination: /Volumes/64GB-alpha/MediaMan
+  64b:
+    type: folder
+    quota: 63GB
+    destination: /Volumes/64GB-beta/MediaMan
+  64c:
+    type: folder
+    quota: 63GB
+    destination: /Volumes/64GB-gamma/MediaMan
+  64d:
+    type: folder
+    quota: 63GB
+    destination: /Volumes/64GB-delta/MediaMan
   # s3:
   #   type: aws s3
   #   quota: 10GB

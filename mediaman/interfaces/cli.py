@@ -206,7 +206,7 @@ def run_file_list(results, all_mode=False):
                 for response_obj in responses:
                     if response_obj.response:
                         for item in response_obj.response:
-                            yield (response_obj.client.name(), item["name"], human_bytes(item["size"]), item["hash"], item["id"])
+                            yield (response_obj.client.nickname(), item["name"], human_bytes(item["size"]), item["hash"], item["id"])
 
     gen = watertable.table_stream(columns, files_iterator(results))
     for row in gen:
