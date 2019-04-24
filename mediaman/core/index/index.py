@@ -7,7 +7,6 @@ import tempfile
 import uuid
 
 from mediaman.core import logtools
-from mediaman.core import hashing
 from mediaman.core import models
 from mediaman.core.index import base
 

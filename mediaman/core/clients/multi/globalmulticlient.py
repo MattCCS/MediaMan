@@ -120,7 +120,7 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
         candidates = set()
         for (client, result) in zip(self.clients, gen_all(methods.has_hash(self.clients, hash))):
             if result.response:
-                logger.info("MediaMan already has this file.")
+                logger.info(f"MediaMan already has this file ('{request.path}').")
                 return False
             elif result.response is False:
                 candidates.add(client)

@@ -18,3 +18,8 @@ def hash(path, buffer=8192):
             data = infile.read(buffer)
 
     return sha.hexdigest()
+
+
+# def hash(path):
+#     import subprocess
+#     return subprocess.check_output(["xxhsum", str(path)])

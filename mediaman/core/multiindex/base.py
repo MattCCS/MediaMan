@@ -59,7 +59,7 @@ class BaseMultiIndex(abstract.AbstractMultiIndex):
         for identifier in identifiers:
             if not validation.is_valid_sha256(identifier):
                 logger.error(f"May only pass hashes to `remove` method, got '{identifier}'.")
-                raise RuntimeError("invalid sha256")
+                return
 
         requests = (
             models.Request(id=None, path=None, hash=identifier)
