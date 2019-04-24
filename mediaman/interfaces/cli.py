@@ -43,6 +43,7 @@ STATUS_TEXT_SERVICE = "Report on the status/availability of this service"
 CAPACITY_TEXT_SERVICE = "Report on the visible capacity of this service"
 CONFIG_TEXT_SERVICE = "Show the config info of this service"
 REFRESH_TEXT_SERVICE = "Refresh the tracking info of this service"
+REMOVE_TEXT_SERVICE = "Remove the given file(s) from this service (by hash only)"
 
 
 class Action(enum.Enum):
@@ -59,6 +60,7 @@ class Action(enum.Enum):
     CAPACITY = "cap"
     CONFIG = "config"
     REFRESH = "refresh"
+    REMOVE = "remove"
 
 
 ACTIONS = frozenset(action.value for action in Action)
@@ -152,6 +154,10 @@ def add_commands(subparsers, service=None):
         add_parser(Action.SERVICES.value, description=SERVICES_TEXT)
         add_parser(Action.SYNC.value, description=SYNC_TEXT)
 
+    if service:
+        p_remove = add_parser(Action.REMOVE.value, description=f"[{service}] -- {REMOVE_TEXT_SERVICE}")
+        p_remove.add_argument("hashes", nargs="+")
+
     add_parser(Action.LIST.value, description=f"[{service}] -- {LIST_TEXT_SERVICE}" if service else LIST_TEXT)
     p_has = add_parser(Action.HAS.value, description=f"[{service}] -- {HAS_TEXT_SERVICE}" if service else HAS_TEXT)
     p_get = add_parser(Action.GET.value, description=f"[{service}] -- {GET_TEXT_SERVICE}" if service else GET_TEXT)
@@ -174,7 +180,7 @@ def run_services():
 def human_bytes(n):
     """Return the given bytes as a human-friendly string"""
 
-    step = 1024
+    step = 1000
     abbrevs = ['KB', 'MB', 'GB', 'TB']
 
     if n < step:
@@ -315,6 +321,10 @@ def main():
     elif args.action == Action.REFRESH.value:
         results = api.run_refresh(service_selector=service_selector)
         print(repr(results))
+    elif args.action == Action.REMOVE.value:
+        results = api.run_remove(*args.hashes, service_selector=service_selector)
+        for result in results:
+            print(repr(result))
     else:
         raise NotImplementedError()
 

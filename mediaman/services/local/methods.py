@@ -4,6 +4,13 @@ import os
 import pathlib
 import shutil
 
+from mediaman.core import logtools
+
+logger = logtools.new_logger("mediaman.services.local.methods")
+
+
+WRITE_BUFFER = 1_000_000
+
 
 def folder_size(path):
     total = 0
@@ -19,6 +26,7 @@ def require_destination_path(destination):
     assert destination
     path = pathlib.Path(destination)
     assert path.exists()
+    assert path.is_absolute()
     return path
 
 
@@ -59,7 +67,10 @@ def upload(destination_path, request):
     dest = destination_path / request.id
     with open(request.path, "rb") as infile:
         with open(dest, "wb") as outfile:
-            outfile.write(infile.read())
+            data = infile.read(WRITE_BUFFER)
+            while data:
+                outfile.write(data)
+                data = infile.read(WRITE_BUFFER)
     return {
         "id": request.id,
     }
@@ -67,11 +78,13 @@ def upload(destination_path, request):
 
 def download(destination_path, request):
     # TODO: check for overwriting?
-    # TODO: write in chunks?
     source_file_path = destination_path / request.id
     with open(source_file_path, "rb") as infile:
         with open(request.path, "wb") as outfile:
-            outfile.write(infile.read())
+            data = infile.read(WRITE_BUFFER)
+            while data:
+                outfile.write(data)
+                data = infile.read(WRITE_BUFFER)
     return {
         "id": request.id,
         "path": request.path,
@@ -82,3 +95,17 @@ def capacity(destination_path, quota):
     disk_usage = shutil.disk_usage(destination_path)
     used = folder_size(destination_path)
     return {"used": used, "quota": quota, "total": disk_usage.total}
+
+
+def remove(destination_path, file_id):
+    path = pathlib.Path(destination_path / file_id)
+    logger.debug(f"Removing file at '{path}' ...")
+
+    assert path.is_absolute()
+    if not path.exists():
+        raise FileNotFoundError()  # TODO: raise custom error
+
+    os.remove(path)
+    return {
+        "id": file_id,
+    }

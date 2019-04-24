@@ -58,3 +58,8 @@ class SingleClient(abstract.AbstractSingleClient):
 
     def refresh(self):
         return self.index.refresh()
+
+    def remove(self, request):
+        hash = request.hash
+        assert validation.is_valid_sha256(hash)
+        return self.index.remove(request)

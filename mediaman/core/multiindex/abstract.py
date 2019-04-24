@@ -41,3 +41,7 @@ class AbstractMultiIndex(abc.ABC):
 
     def sync(self):
         return self.client.sync()
+
+    @abc.abstractmethod
+    def remove(self, *requests):
+        raise NotImplementedError()

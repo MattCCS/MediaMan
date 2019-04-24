@@ -27,7 +27,7 @@ def parse_human_bytes(human_bytes):
     try:
         m = re.match(human_bytes_regex, human_bytes.strip())
         cap = float(m["cap"].replace("_", ""))
-        cap *= (1024 ** units[m["unit"]])
+        cap *= (1000 ** units[m["unit"]])
         return int(cap)
     except (KeyError, ValueError, TypeError) as exc:
         raise RuntimeError(f"Couldn't parse human bytes: {human_bytes}", exc)

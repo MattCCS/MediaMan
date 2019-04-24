@@ -5,7 +5,6 @@ import shutil
 import tempfile
 
 from mediaman import config
-from mediaman.core import hashing
 from mediaman.core import logtools
 from mediaman.core import models
 from mediaman.core import validation
@@ -171,22 +170,32 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
         capacity_results = list(gen_all(methods.capacity(self.clients)))
 
         files_by_nickname = {rslt.client.nickname(): {f["hash"]: f for f in rslt.response} for rslt in list_files_results if rslt.response}
-        capacity_by_nickname = {rslt.client.nickname(): rslt.response.allowed() for rslt in capacity_results if rslt.response}
+        capacity_by_nickname = {rslt.client.nickname(): rslt.response.available() for rslt in capacity_results if rslt.response}
 
         from mediaman.core.strategies import distribution
         bins = capacity_by_nickname
         items = {f["hash"]: f["size"] for fs in files_by_nickname.values() for f in fs.values()}
-        print(len(items))
+        logger.debug(f"Bins: {bins}")
+        logger.debug(f"Total unique items: {len(items)}")
 
         old_dist = {nickname: set(hash for hash in files) for (nickname, files) in files_by_nickname.items()}
         new_dist = distribution.distribute(bins, items, distribution=old_dist)
 
+        any_changes = False
         for nickname in old_dist:
             v1 = old_dist[nickname]
             v2 = new_dist[nickname]
             remove = (v1 - v2)
             add = (v2 - v1)
-            print(f"changes to '{nickname}':\nadd: {add}\nremove: {remove}")
+            if add or remove:
+                any_changes = True
+                print(f"changes to '{nickname}':\nadd: {add}\nremove: {remove}")
+            else:
+                print(f"No changes for '{nickname}'.")
+
+        if not any_changes:
+            print(f"No changes necessary, MediaMan is already synchronized.")
+            return False
 
         inp = input("Would you like to proceed? [Y/n] ")
         if inp != "Y":
@@ -202,6 +211,8 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
             remove = (v1 - v2)
             add = (v2 - v1)
             self.sync_changes(client, remove, add)
+
+        return True
 
     def sync_changes(self, client, remove, add):
         logger.info(f"Syncing '{client.nickname()}'...")
@@ -224,7 +235,7 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
                 upload_request = models.Request(
                     id=None,
                     path=download_receipt.path(),
-                    hash=hashing.hash(download_receipt.path()))
+                    hash=hash)
                 logger.debug(f"Upload request: {upload_request}")
 
                 upload = client.upload(upload_request)
@@ -232,3 +243,6 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
 
     def refresh(self):
         raise NotImplementedError()  # `mm refresh` not implemented yet
+
+    def remove(self, request):
+        raise NotImplementedError()  # `mm remove` is not allowed

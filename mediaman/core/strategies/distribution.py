@@ -25,7 +25,7 @@ class Item(Obj):
 def human_bytes(n):
     """Return the given bytes as a human-friendly string"""
 
-    step = 1024
+    step = 1000
     abbrevs = ['KB', 'MB', 'GB', 'TB']
 
     if n < step:

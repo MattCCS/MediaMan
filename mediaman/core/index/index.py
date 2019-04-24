@@ -238,3 +238,30 @@ class Index(base.BaseIndex):
 
         self.metadata = new_metadata
         self.update_metadata()
+
+    @init
+    def remove(self, request):
+        hash = request.hash
+        if not self.has_hash(hash):
+            logger.error(f"[-] No such file exists with that hash!")
+            return None
+
+        # NOTE: slightly lower-level than ideal...
+        index = self.hash_to_metadata_map[hash]
+        metadata = self.metadata[index]
+        id = metadata["id"]
+
+        result = self.service.remove(metadata["sid"])
+        logger.info(result)
+
+        del self.hash_to_metadata_map[hash]
+        del self.id_to_metadata_map[id]
+        del self.metadata[index]
+
+        logger.debug(self.hash_to_metadata_map.keys())
+        logger.debug(self.id_to_metadata_map.keys())
+        logger.debug(self.metadata.keys())
+
+        self.update_metadata()
+
+        return result

@@ -61,5 +61,10 @@ class AbstractService(abc.ABC):
         """Return quota information for this service."""
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def remove(self, file_id) -> models.AbstractReceiptFile:
+        """Remove a file from the service."""
+        raise NotImplementedError()
+
     def __repr__(self):
         return f"{self.__class__.__name__}(\"{self.nickname()}\")"

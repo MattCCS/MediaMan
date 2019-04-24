@@ -71,3 +71,10 @@ class DriveService(service.AbstractService):
         return models.DriveResultQuota(
             methods.capacity(self._drive, self._config.quota)
         )
+
+    @service.auth
+    def remove(self, file_id):
+        raise NotImplementedError()
+        # return models.DriveReceiptFile(
+        #     methods.remove(self._drive, file_id)
+        # )

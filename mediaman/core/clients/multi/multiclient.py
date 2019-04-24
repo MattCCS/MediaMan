@@ -41,3 +41,6 @@ class Multiclient(abstract.AbstractMulticlient):
 
     def refresh(self):
         raise RuntimeError()  # `mm all refresh` isn't allowed
+
+    def remove(self, request):
+        raise RuntimeError()  # `mm all remove` isn't allowed

@@ -65,7 +65,7 @@ class AbstractResultFileList(abc.ABC):
 def human_bytes(n):
     """Return the given bytes as a human-friendly string"""
 
-    step = 1024
+    step = 1000
     abbrevs = ['KB', 'MB', 'GB', 'TB']
 
     if n < step:
@@ -99,6 +99,10 @@ class AbstractResultQuota(abc.ABC):
     def allowed(self):
         """The practical maximum allowed (by the total and quota)."""
         return min(self.quota(), self.total()) if (self.quota() is not None) else self.total()
+
+    def available(self):
+        """The practical maximum space left (allowed - used)."""
+        return self.allowed() - self.used()
 
     def __repr__(self):
         return f"{type(self)}({self.used() / self.allowed():.0%} ({human_bytes(self.used())} / {human_bytes(self.allowed())}) (potentially {human_bytes(self.total())}))"

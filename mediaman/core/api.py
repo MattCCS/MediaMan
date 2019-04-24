@@ -68,3 +68,7 @@ def run_sync(service_selector=None):
 
 def run_refresh(service_selector=None):
     return policy.load_client(service_selector=service_selector).refresh()
+
+
+def run_remove(*identifiers, service_selector=None):
+    return policy.load_client(service_selector=service_selector).remove(*identifiers)

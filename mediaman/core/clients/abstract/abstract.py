@@ -52,3 +52,8 @@ class AbstractClient(abc.ABC):
     def refresh(self):
         """Refresh the tracking info of the service."""
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def remove(self, request) -> models.AbstractReceiptFile:
+        """Remove the file from the service."""
+        raise NotImplementedError()
