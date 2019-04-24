@@ -24,6 +24,16 @@ class AbstractReceiptFile(abc.ABC):
         return f"ReceiptFile({self.id()})"
 
 
+class AbstractDownloadReceiptFile(AbstractReceiptFile):
+
+    @abc.abstractmethod
+    def path(self):
+        raise NotImplementedError()
+
+    def __repr__(self):
+        return f"DownloadReceiptFile({self.id()}, {self.path()})"
+
+
 class AbstractResultFile(abc.ABC):
 
     @abc.abstractmethod

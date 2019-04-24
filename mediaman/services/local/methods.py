@@ -60,7 +60,9 @@ def upload(destination_path, request):
     with open(request.path, "rb") as infile:
         with open(dest, "wb") as outfile:
             outfile.write(infile.read())
-    return request.id
+    return {
+        "id": request.id,
+    }
 
 
 def download(destination_path, request):
@@ -70,7 +72,10 @@ def download(destination_path, request):
     with open(source_file_path, "rb") as infile:
         with open(request.path, "wb") as outfile:
             outfile.write(infile.read())
-    return request.path
+    return {
+        "id": request.id,
+        "path": request.path,
+    }
 
 
 def capacity(destination_path, quota):

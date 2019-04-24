@@ -5,7 +5,9 @@ import shutil
 import tempfile
 
 from mediaman import config
+from mediaman.core import hashing
 from mediaman.core import logtools
+from mediaman.core import models
 from mediaman.core import validation
 from mediaman.core.clients.multi import abstract
 from mediaman.core.clients.multi import methods
@@ -215,11 +217,17 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
         for hash in add:
             with make_temp_directory() as temp_dir:
                 root = pathlib.Path(temp_dir)
-                logger.info(root)
-                download = self.download(root, hash)
-                logger.info(f"dl: {download}")
-                exit(1)
-                upload = client.upload(download)
+                logger.info(f"Downloading '{hash}' to '{root}' ...")
+                download_receipt = self.download(root, hash)
+                logger.debug(f"Download receipt: {download_receipt}")
+
+                upload_request = models.Request(
+                    id=None,
+                    path=download_receipt.path(),
+                    hash=hashing.hash(download_receipt.path()))
+                logger.debug(f"Upload request: {upload_request}")
+
+                upload = client.upload(upload_request)
                 logger.info(f"Uploaded: {upload}")
 
     def refresh(self):

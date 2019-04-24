@@ -8,11 +8,21 @@ class LocalConfig(models.BaseConfig):
 
 class LocalReceiptFile(models.AbstractReceiptFile):
 
-    def __init__(self, filename):
-        self.filename = filename
+    def __init__(self, data):
+        self.filename = data["id"]
 
     def id(self):
         return self.filename
+
+
+class LocalDownloadReceiptFile(models.AbstractDownloadReceiptFile, LocalReceiptFile):
+
+    def __init__(self, data):
+        super().__init__(data)
+        self._path = data["path"]
+
+    def path(self):
+        return self._path
 
 
 class LocalResultFile(models.AbstractResultFile):

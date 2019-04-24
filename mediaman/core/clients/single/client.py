@@ -1,7 +1,6 @@
 
 import pathlib
 
-from mediaman.core import hashing
 from mediaman.core import validation
 from mediaman.core.clients.single import abstract
 
@@ -52,7 +51,7 @@ class SingleClient(abstract.AbstractSingleClient):
         return self.index.upload(request)
 
     def download(self, root, file_id):
-        return [self.index.download(root, file_id)]
+        return self.index.download(root, file_id)
 
     def capacity(self):
         return self.index.capacity()

@@ -48,6 +48,9 @@ class Request:
     def hash(self, value):
         self._hash = value
 
+    def __repr__(self):
+        return f"Request({self.id}, {self.path}, {self.hash})"
+
 
 class Response:
     def __init__(self, client, response, exception: Exception):

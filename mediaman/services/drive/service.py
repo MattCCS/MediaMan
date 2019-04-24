@@ -62,7 +62,7 @@ class DriveService(service.AbstractService):
 
     @service.auth
     def download(self, request):
-        return models.DriveReceiptFile(
+        return models.DriveDownloadReceiptFile(
             methods.download(self._drive, request, folder_id=self._folder_id)
         )
 

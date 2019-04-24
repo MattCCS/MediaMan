@@ -19,6 +19,16 @@ class DriveReceiptFile(models.AbstractReceiptFile):
         return self._id
 
 
+class DriveDownloadReceiptFile(models.AbstractDownloadReceiptFile, DriveReceiptFile):
+
+    def __init__(self, file_data):
+        super().__init__(file_data)
+        self._path = file_data["path"]
+
+    def path(self):
+        return self._path
+
+
 class DriveResultFile(models.AbstractResultFile):
 
     def __init__(self, file_data):

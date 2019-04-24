@@ -41,7 +41,7 @@ class LocalService(service.AbstractService):
         )
 
     def download(self, request):
-        return models.LocalReceiptFile(
+        return models.LocalDownloadReceiptFile(
             methods.download(self.destination_path, request)
         )
 
