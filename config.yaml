@@ -35,7 +35,11 @@ services:
   local:
     type: folder
     quota: 20GB
-    destination: /Users/mattcotton/MediaMan
+    destination: /Users/matthewcotton/MediaMan
+  # localw:
+  #   type: folder
+  #   quota: 20GB
+  #   destination: /Users/mattcotton/MediaMan
   128a:
     type: folder
     quota: 127GB

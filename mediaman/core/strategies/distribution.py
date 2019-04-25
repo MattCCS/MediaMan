@@ -70,16 +70,25 @@ def fast_optimal(
             break
 
         for item in reversed(items_queue):
-            try:
-                # find smallest bin larger than item
-                bin = bin_queue.pop(bin_queue.bisect_left(item))
-            except IndexError:
+            # print(item)
+
+            # find smallest bin larger than item
+            for index in range(bin_queue.bisect_left(item), len(bin_queue)):
+                # print(index, len(bin_queue))
+                if item.id not in distribution[bin_queue[index].id]:
+                    bin = bin_queue.pop(index)
+                    print(bin)
+                    break
+            else:
                 # item is too large for any bin
+                # (that doesn't already have it)
+                print("too large")
                 no_change = False
                 trim_items += 1
                 continue
 
             if item.id not in distribution[bin.id]:
+                print("NEW FILE")
                 distribution[bin.id].add(item.id)
                 bin = Bin(bin.id, bin.n - item.n)
                 no_change = False
@@ -87,9 +96,11 @@ def fast_optimal(
             bin_queue.add(bin)
 
         if no_change:
+            print("no change")
             break
 
         if trim_items:
+            print(f"trim {trim_items}")
             items_queue = items_queue[:-trim_items]
 
     return distribution

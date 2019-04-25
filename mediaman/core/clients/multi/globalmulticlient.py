@@ -185,6 +185,7 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
         for nickname in old_dist:
             v1 = old_dist[nickname]
             v2 = new_dist[nickname]
+            print(nickname, len(v1), len(v2))
             remove = (v1 - v2)
             add = (v2 - v1)
             if add or remove:
