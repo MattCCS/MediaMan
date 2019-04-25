@@ -1,5 +1,25 @@
 
+import enum
 import hashlib
+
+
+DELIMITER = ":"
+
+
+def join(*args):
+    return DELIMITER.join(args)
+
+
+def to_sha256(unlabeled_hash):
+    return join(Hash.SHA256.value, unlabeled_hash)
+
+
+# def is_sha256(labeled_hash):
+#     return labeled_hash.startswith(label) and labeled_hash
+
+
+class Hash(enum.Enum):
+    SHA256 = "sha256"
 
 
 def hash(path, buffer=8192):
@@ -17,7 +37,7 @@ def hash(path, buffer=8192):
             sha.update(data)
             data = infile.read(buffer)
 
-    return sha.hexdigest()
+    return to_sha256(sha.hexdigest())
 
 
 # def hash(path):

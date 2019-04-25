@@ -28,12 +28,13 @@ def init(func):
     return wrapped
 
 
-def create_file(id, name, sid, hash, size):
+def create_file(id, name, sid, hashes, size):
+    assert isinstance(hashes, list)
     return {
         "id": id,
         "name": name,
         "sid": sid,
-        "hash": hash,
+        "hashes": hashes,
         "size": size,
     }
 
@@ -128,7 +129,7 @@ class Index(base.BaseIndex):
 
         self.metadata = metadata
         self.id_to_metadata_map = {v["id"]: k for (k, v) in self.files().items()}
-        self.hash_to_metadata_map = {v["hash"]: k for (k, v) in self.files().items()}
+        self.hash_to_metadata_map = {hash: k for (k, v) in self.files().items() for hash in v["hashes"]}
 
     @init
     def new_id(self):
@@ -198,7 +199,8 @@ class Index(base.BaseIndex):
         logger.debug(file)
         self.files()[new_index] = file
         self.id_to_metadata_map[file["id"]] = new_index
-        self.hash_to_metadata_map[file["hash"]] = new_index
+        for hash in file["hashes"]:
+            self.hash_to_metadata_map[hash] = new_index
 
         self.update_metadata()
 
@@ -230,6 +232,7 @@ class Index(base.BaseIndex):
     def refresh(self):
         raw_metadata = self.load_metadata_json(self.service.search_by_name(Index.INDEX_FILENAME).results()[0])
         metadata = migration.repair_metadata(raw_metadata)
+        logger.debug(f"Repaired metadata: {metadata}")
 
         sid_to_metadata = {f["sid"]: f for f in metadata["files"].values()}
 
@@ -253,9 +256,9 @@ class Index(base.BaseIndex):
                 continue
 
             name = file_metadata["name"]
-            hash = file_metadata["hash"]
+            hashes = file_metadata["hashes"]
 
-            new_file = create_file(id, name, sid, hash, size)
+            new_file = create_file(id, name, sid, hashes, size)
             new_files.append(new_file)
             logger.debug(new_file)
 
@@ -263,6 +266,11 @@ class Index(base.BaseIndex):
         new_metadata = create_metadata(new_metadata_files)
         logger.info(f"Old metadata: {raw_metadata}")
         logger.info(f"New metadata: {new_metadata}")
+
+        inp = input("Does everything look good? [Y/n] ")
+        if inp not in 'yY':
+            print("Cancelled.")
+            return
 
         self.metadata = new_metadata
         self.update_metadata()

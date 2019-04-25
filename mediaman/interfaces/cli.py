@@ -197,14 +197,14 @@ def human_bytes(n):
 def run_file_list(results, all_mode=False):
     from mediaman.core import watertable
 
-    columns = ((("service", 16),) if all_mode else ()) + (("name", 40 + (0 if all_mode else 19)), ("size", 9), ("hash", 64), ("id", 36))
+    columns = ((("service", 16),) if all_mode else ()) + (("name", 40 + (0 if all_mode else 19)), ("size", 9), ("hash", 71), ("id", 36))
 
     def files_iterator(responses):
         nonlocal all_mode
         if not all_mode:
             for file_results_list in responses:
                 for item in file_results_list:
-                    yield (item["name"], human_bytes(item["size"]), item["hash"], item["id"])
+                    yield (item["name"], human_bytes(item["size"]), item["hashes"][-1], item["id"])
         else:
             # TODO: this is screwed up, need to stick to classes better
             all_responses = responses
@@ -212,7 +212,7 @@ def run_file_list(results, all_mode=False):
                 for response_obj in responses:
                     if response_obj.response:
                         for item in response_obj.response:
-                            yield (response_obj.client.nickname(), item["name"], human_bytes(item["size"]), item["hash"], item["id"])
+                            yield (response_obj.client.nickname(), item["name"], human_bytes(item["size"]), item["hashes"][-1], item["id"])
 
     gen = watertable.table_stream(columns, files_iterator(results))
     for row in gen:

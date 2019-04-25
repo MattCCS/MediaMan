@@ -79,12 +79,13 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
         self.clients = [temp_clients[name] for name in sorted_names]
 
     def list_files(self):
-        deduped_results = {}
+        deduped_results = set()
         for result in gen_all(methods.list_files(self.clients)):
             for each in result.response:
-                if each["hash"] not in deduped_results:
-                    deduped_results[each["hash"]] = each
-                    yield {"id": each["id"], "name": each["name"], "hash": each["hash"], "size": each["size"]}
+                hashes = each["hashes"]
+                if not set(hashes) & deduped_results:
+                    yield {"id": each["id"], "name": each["name"], "hashes": hashes, "size": each["size"]}
+                deduped_results.update(hashes)
 
     def has(self, request):
         hash = request.hash
@@ -96,20 +97,20 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
         deduped_results = set()  # (name, hash)
         for result in results:
             for each in result.response:
-                key = (each["name"], each["hash"])
-                if key not in deduped_results:
+                keys = set((each["name"], hash) for hash in each["hashes"])
+                if not keys & deduped_results:
                     yield each
-                    deduped_results.add(key)
+                deduped_results.update(keys)
 
     def fuzzy_search_by_name(self, file_name):
         results = gen_all(methods.fuzzy_search_by_name(self.clients, file_name))
         deduped_results = set()  # (name, hash)
         for result in results:
             for each in result.response:
-                key = (each["name"], each["hash"])
-                if key not in deduped_results:
+                keys = set((each["name"], hash) for hash in each["hashes"])
+                if not keys & deduped_results:
                     yield each
-                    deduped_results.add(key)
+                deduped_results.update(keys)
 
     def upload(self, request):
         # TODO: make this better...

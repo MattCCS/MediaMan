@@ -17,6 +17,8 @@ def is_valid_uuid(string, version=4):
 
 def is_valid_sha256(string):
     string = str(string)
+    if string.startswith("sha256:"):
+        string = string[7:]
     return (len(string) == 64) and (set(string) <= SHA256_CHARS)
 
 
