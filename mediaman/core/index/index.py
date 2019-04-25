@@ -183,11 +183,12 @@ class Index(base.BaseIndex):
         )
         receipt = self.service.upload(request)
 
+        hashes = [hash]
         self.track_file(create_file(
             request.id,
             pathlib.Path(request.path).name,
             receipt.id(),
-            hash,
+            hashes,
             os.stat(request.path).st_size,
         ))
 

@@ -29,9 +29,8 @@ class SingleClient(abstract.AbstractSingleClient):
         return self.index.has_hash(hash)
 
     def has_hash(self, hash):
-        if validation.is_valid_sha256(hash):
-            return self.index.has_hash(hash)
-        raise RuntimeError("invalid hash")
+        # TODO: validate valid hash?
+        return self.index.has_hash(hash)
 
     def has_uuid(self, uuid):
         if validation.is_valid_uuid(uuid):
