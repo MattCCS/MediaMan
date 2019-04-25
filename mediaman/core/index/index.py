@@ -6,9 +6,11 @@ import pathlib
 import tempfile
 import uuid
 
+from mediaman.core import settings
 from mediaman.core import logtools
 from mediaman.core import models
 from mediaman.core.index import base
+from mediaman.core.index import migration
 
 logger = logtools.new_logger("mediaman.core.index.index")
 
@@ -36,6 +38,13 @@ def create_file(id, name, sid, hash, size):
     }
 
 
+def create_metadata(files):
+    return {
+        "version": settings.VERSION,
+        "files": files,
+    }
+
+
 class Index(base.BaseIndex):
 
     INDEX_FILENAME = "index"
@@ -48,6 +57,9 @@ class Index(base.BaseIndex):
         self.metadata = {}
         self.id_to_metadata_map = {}
         self.hash_to_metadata_map = {}
+
+    def files(self):
+        return self.metadata["files"]
 
     def force_init(self):
         self.init_metadata()
@@ -98,11 +110,25 @@ class Index(base.BaseIndex):
             return json.loads(tempfile_ref.read())
 
     def load_metadata(self, index):
-        self.metadata = self.load_metadata_json(index)
-        self.id_to_metadata_map = {v["id"]: k for (k, v) in self.metadata.items()}
-        self.hash_to_metadata_map = {v["hash"]: k for (k, v) in self.metadata.items()}
+        metadata = self.load_metadata_json(index)
+        logger.debug(f"Loaded metadata: {metadata}")
 
-        # print(self.metadata)
+        if "version" not in metadata:
+            logger.critical(f"'version' field missing from metadata!  This is an outdated or unversioned index file.  You will need to fix it by running `mm <service> refresh`.")
+            raise RuntimeError("Unversioned metadata")
+
+        version = metadata["version"]
+        if version > settings.VERSION:
+            logger.critical(f"Metadata version ({version}) exceeds software version ({settings.VERSION}).  You need to update your software to parse this index file.")
+            raise RuntimeError("Outdated software")
+
+        if version < settings.VERSION:
+            logger.critical(f"Metadata version ({version}) is below software version ({settings.VERSION}).  You need to update it by running `mm <service> refresh`.")
+            raise RuntimeError("Outdated metadata")
+
+        self.metadata = metadata
+        self.id_to_metadata_map = {v["id"]: k for (k, v) in self.files().items()}
+        self.hash_to_metadata_map = {v["hash"]: k for (k, v) in self.files().items()}
 
     @init
     def new_id(self):
@@ -113,23 +139,23 @@ class Index(base.BaseIndex):
 
     @init
     def get_metadata_by_hash(self, hash):
-        return self.metadata[self.hash_to_metadata_map[hash]]
+        return self.files()[self.hash_to_metadata_map[hash]]
 
     @init
     def get_metadata_by_uuid(self, uuid):
-        return self.metadata[self.id_to_metadata_map[uuid]]
+        return self.files()[self.id_to_metadata_map[uuid]]
 
     @init
     def list_files(self):
-        return iter(self.metadata.values())
+        return iter(self.files().values())
 
     @init
     def search_by_name(self, file_name):
-        return [f for f in self.metadata.values() if f["name"] == file_name]
+        return [f for f in self.files().values() if f["name"] == file_name]
 
     @init
     def fuzzy_search_by_name(self, file_name):
-        return [f for f in self.metadata.values() if file_name.lower() in f["name"].lower()]
+        return [f for f in self.files().values() if file_name.lower() in f["name"].lower()]
 
     @init
     def has_hash(self, hash):
@@ -168,9 +194,9 @@ class Index(base.BaseIndex):
 
     @init
     def track_file(self, file):
-        new_index = str(max(map(int, self.metadata), default=-1) + 1)
+        new_index = str(max(map(int, self.files()), default=-1) + 1)
         logger.debug(file)
-        self.metadata[new_index] = file
+        self.files()[new_index] = file
         self.id_to_metadata_map[file["id"]] = new_index
         self.hash_to_metadata_map[file["hash"]] = new_index
 
@@ -202,8 +228,10 @@ class Index(base.BaseIndex):
         return self.service.download(request)
 
     def refresh(self):
-        metadata = self.load_metadata_json(self.service.search_by_name(Index.INDEX_FILENAME).results()[0])
-        sid_to_metadata = {f["sid"]: f for f in metadata.values()}
+        raw_metadata = self.load_metadata_json(self.service.search_by_name(Index.INDEX_FILENAME).results()[0])
+        metadata = migration.repair_metadata(raw_metadata)
+
+        sid_to_metadata = {f["sid"]: f for f in metadata["files"].values()}
 
         current_files = self.service.list_files().results()
         new_files = []
@@ -231,8 +259,9 @@ class Index(base.BaseIndex):
             new_files.append(new_file)
             logger.debug(new_file)
 
-        new_metadata = {str(i): v for (i, v) in dict(enumerate(new_files)).items()}
-        logger.info(f"Old metadata: {metadata}")
+        new_metadata_files = {str(i): v for (i, v) in dict(enumerate(new_files)).items()}
+        new_metadata = create_metadata(new_metadata_files)
+        logger.info(f"Old metadata: {raw_metadata}")
         logger.info(f"New metadata: {new_metadata}")
 
         self.metadata = new_metadata
@@ -247,7 +276,7 @@ class Index(base.BaseIndex):
 
         # NOTE: slightly lower-level than ideal...
         index = self.hash_to_metadata_map[hash]
-        metadata = self.metadata[index]
+        metadata = self.files()[index]
         id = metadata["id"]
 
         result = self.service.remove(metadata["sid"])
@@ -255,11 +284,11 @@ class Index(base.BaseIndex):
 
         del self.hash_to_metadata_map[hash]
         del self.id_to_metadata_map[id]
-        del self.metadata[index]
+        del self.files()[index]
 
         logger.debug(self.hash_to_metadata_map.keys())
         logger.debug(self.id_to_metadata_map.keys())
-        logger.debug(self.metadata.keys())
+        logger.debug(self.files().keys())
 
         self.update_metadata()
 
