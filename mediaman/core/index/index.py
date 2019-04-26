@@ -1,14 +1,17 @@
 
+import contextlib
 import functools
 import json
 import os
 import pathlib
+import shutil
 import tempfile
 import uuid
 
-from mediaman.core import settings
+from mediaman.core import hashing
 from mediaman.core import logtools
 from mediaman.core import models
+from mediaman.core import settings
 from mediaman.core.index import base
 from mediaman.core.index import migration
 
@@ -26,6 +29,15 @@ def init(func):
         self.init_metadata()
         return func(self, *args, **kwargs)
     return wrapped
+
+
+@contextlib.contextmanager
+def make_temp_directory():
+    temp_dir = tempfile.mkdtemp()
+    try:
+        yield temp_dir
+    finally:
+        shutil.rmtree(temp_dir)
 
 
 def create_file(id, name, sid, hashes, size):
@@ -233,8 +245,28 @@ class Index(base.BaseIndex):
     def refresh(self):
         raw_metadata = self.load_metadata_json(self.service.search_by_name(Index.INDEX_FILENAME).results()[0])
         metadata = migration.repair_metadata(raw_metadata)
-        logger.debug(f"Repaired metadata: {metadata}")
 
+        print(f"Repaired metadata: {metadata}")
+        inp = input("Does everything look good? [Y/n] ")
+        if inp not in 'yY':
+            print("Cancelled.")
+            return
+
+        self.metadata = metadata
+        self.update_metadata()
+
+        inp = input("Would you like to refresh the file list? [Y/n] ")
+        if inp in 'yY':
+            logger.info(f"Old metadata: {raw_metadata}")
+            self.refresh_file_list(metadata)
+
+        inp = input("Would you like to refresh the file hashes?  This may take a long time, but is useful when you have changed the preferred hash function. [Y/n]  ")
+        if inp in 'yY':
+            self.refresh_hashes()
+
+        return
+
+    def refresh_file_list(self, metadata):
         sid_to_metadata = {f["sid"]: f for f in metadata["files"].values()}
 
         current_files = self.service.list_files().results()
@@ -265,7 +297,6 @@ class Index(base.BaseIndex):
 
         new_metadata_files = {str(i): v for (i, v) in dict(enumerate(new_files)).items()}
         new_metadata = create_metadata(new_metadata_files)
-        logger.info(f"Old metadata: {raw_metadata}")
         logger.info(f"New metadata: {new_metadata}")
 
         inp = input("Does everything look good? [Y/n] ")
@@ -275,6 +306,33 @@ class Index(base.BaseIndex):
 
         self.metadata = new_metadata
         self.update_metadata()
+
+    def refresh_hashes(self):
+        preferred_hash = hashing.PREFERRED_HASH.value
+
+        for file in self.files().values():
+
+            hash_prefixes = set(hash.split(":")[0] for hash in file["hashes"])
+            if preferred_hash in hash_prefixes:
+                logger.info(f"Preferred hash already present for: {file}")
+                continue
+
+            with tempfile.NamedTemporaryFile("w+", delete=True) as tempfile_ref:
+                path = tempfile_ref.name
+                request = models.Request(
+                    id=file["sid"],
+                    path=path,
+                )
+
+                self.service.download(request)
+                tempfile_ref.seek(0)
+
+                hash = hashing.hash(path)
+                logger.debug(f"Hash of {file}: {hash}")
+
+                file["hashes"].append(hash)
+                self.update_metadata()
+                logger.info(f"Updated hash for: {file}")
 
     @init
     def remove(self, request):
