@@ -44,3 +44,6 @@ class Multiclient(abstract.AbstractMulticlient):
 
     def remove(self, request):
         raise RuntimeError()  # `mm all remove` isn't allowed
+
+    def refresh_global_hashes(self, request):
+        raise NotImplementedError()

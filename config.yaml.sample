@@ -1,0 +1,56 @@
+# MediaMan configuration file
+#
+# NOTE: This file is for PUBLIC DATA ONLY!
+
+
+### Fields:
+# - type: <choose one>
+# - quota: <e.g. 100GB>
+# - destination: <path, folder name, URI, etc.>
+# - credentials: <nested values, arbitrary>
+# - cost: <true/false.  Whether this service costs money for upload/download/storage.  Defaults to false.>
+
+
+### Required Fields:
+# type, quota, destination
+
+
+### Service Types:
+# folder | dropbox | google drive | aws s3 | aws glacier
+
+
+# service configs
+services:
+  drive-example:
+    type: google drive
+    quota: 180GB
+    destination: MediaMan
+    extra:
+      GOOGLE_CLIENT_SECRETS: credentials/drive/client-secrets/client-secret.json
+      GOOGLE_CREDENTIALS: credentials/drive/credentials/stored
+  local-example:
+    type: folder
+    quota: 20GB
+    destination: /some/path/to/MediaMan
+  sd-card-example:
+    type: folder
+    quota: 127GB
+    destination: /Volumes/MySDCard/MediaMan
+  # s3:
+  #   type: aws s3
+  #   quota: 10GB
+  #   destination: MediaMan
+  #   cost: true
+  # ex:
+  #   type: folder
+  #   quota: 1TB
+  #   destination: /Volumes/ExternalDrive/me
+  # net:
+  #   type: folder
+  #   quota: 2TB
+  #   destination: /Network/some-share/me
+
+resolution-order:
+  - local-example
+  - sd-card-example
+  - drive-example

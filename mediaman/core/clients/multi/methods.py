@@ -110,3 +110,7 @@ def upload(clients, file_path) -> Iterable[models.Response]:
 
 def capacity(clients) -> Iterable[models.Response]:
     return apply_consecutive(clients, "capacity")
+
+
+def refresh_global_hashes(clients, hashes_by_hash) -> Iterable[models.Response]:
+    return apply_consecutive(clients, "refresh_global_hashes", hashes_by_hash)

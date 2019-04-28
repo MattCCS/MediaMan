@@ -244,7 +244,22 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
                 logger.info(f"Uploaded: {upload}")
 
     def refresh(self):
-        raise NotImplementedError()  # `mm refresh` not implemented yet
+        return self.refresh_global_hashes()
+
+    def refresh_global_hashes(self):
+        logger.info("Collecting file lists...")
+        list_files_results = list(gen_all(methods.list_files(self.clients)))
+        hashes_by_hash = {}
+
+        for rslt in list_files_results:
+            if rslt.response:
+                for file in rslt.response:
+                    hashes = set(file["hashes"])
+                    group = set(hashes).union(*(hashes_by_hash.get(h, set()) for h in hashes))
+                    for h in group:
+                        hashes_by_hash[h] = group
+
+        return list(gen_all(methods.refresh_global_hashes(self.clients, hashes_by_hash)))
 
     def remove(self, request):
         raise NotImplementedError()  # `mm remove` is not allowed

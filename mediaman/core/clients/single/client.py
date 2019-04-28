@@ -62,3 +62,6 @@ class SingleClient(abstract.AbstractSingleClient):
         hash = request.hash
         assert validation.is_valid_sha256(hash)
         return self.index.remove(request)
+
+    def refresh_global_hashes(self, request):
+        return self.index.refresh_global_hashes(request)

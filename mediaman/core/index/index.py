@@ -312,6 +312,7 @@ class Index(base.BaseIndex):
 
         for file in self.files().values():
 
+            # TODO: make a helper for this
             hash_prefixes = set(hash.split(":")[0] for hash in file["hashes"])
             if preferred_hash in hash_prefixes:
                 logger.info(f"Preferred hash already present for: {file}")
@@ -334,6 +335,22 @@ class Index(base.BaseIndex):
                 self.update_metadata()
                 logger.info(f"Updated hash for: {file}")
 
+    def refresh_global_hashes(self, hashes_by_hash):
+        for (hash, hashes) in hashes_by_hash.items():
+            if self.has_hash(hash):
+                file = self.get_metadata_by_hash(hash)
+                file["hashes"] = sorted(set(file["hashes"]) | hashes)
+
+        # TODO: there's no context here, user doesn't
+        # know which service they're approving changes for...
+        print(f"Repaired hashes: {self.files()}")
+        inp = input("Does everything look good? [Y/n] ")
+        if inp not in 'yY':
+            print("Cancelled.")
+            return
+
+        self.update_metadata()
+
     @init
     def remove(self, request):
         hash = request.hash
@@ -343,10 +360,10 @@ class Index(base.BaseIndex):
 
         # NOTE: slightly lower-level than ideal...
         index = self.hash_to_metadata_map[hash]
-        metadata = self.files()[index]
-        id = metadata["id"]
+        file = self.files()[index]
+        id = file["id"]
 
-        result = self.service.remove(metadata["sid"])
+        result = self.service.remove(file["sid"])
         logger.info(result)
 
         del self.hash_to_metadata_map[hash]

@@ -57,3 +57,7 @@ class AbstractClient(abc.ABC):
     def remove(self, request) -> models.AbstractReceiptFile:
         """Remove the file from the service."""
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def refresh_global_hashes(self, request):
+        raise NotImplementedError()
