@@ -58,7 +58,7 @@ class BaseMultiIndex(abstract.AbstractMultiIndex):
     def remove(self, *identifiers) -> List[abstractmodels.AbstractReceiptFile]:
         for identifier in identifiers:
             # TODO: this should allow any valid hash, or ID
-            if not validation.is_valid_sha256(identifier):
+            if not validation.is_valid_hash(identifier):
                 logger.error(f"May only pass hashes to `remove` method, got '{identifier}'.")
                 return
 

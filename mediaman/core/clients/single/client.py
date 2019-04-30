@@ -60,7 +60,7 @@ class SingleClient(abstract.AbstractSingleClient):
 
     def remove(self, request):
         hash = request.hash
-        assert validation.is_valid_sha256(hash)
+        assert validation.is_valid_hash(hash)
         return self.index.remove(request)
 
     def refresh_global_hashes(self, request):

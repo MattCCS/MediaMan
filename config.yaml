@@ -27,7 +27,7 @@
 services:
   drive:
     type: google drive
-    quota: 180GB
+    quota: 2TB
     destination: MediaMan
     extra:
       GOOGLE_CLIENT_SECRETS: credentials/drive/client-secrets/client-secret.json
@@ -50,19 +50,19 @@ services:
     destination: /Volumes/128GB-beta/MediaMan
   64a:
     type: folder
-    quota: 63GB
+    quota: 62GB
     destination: /Volumes/64GB-alpha/MediaMan
   64b:
     type: folder
-    quota: 63GB
+    quota: 62GB
     destination: /Volumes/64GB-beta/MediaMan
   64c:
     type: folder
-    quota: 63GB
+    quota: 62GB
     destination: /Volumes/64GB-gamma/MediaMan
   64d:
     type: folder
-    quota: 63GB
+    quota: 62GB
     destination: /Volumes/64GB-delta/MediaMan
   # s3:
   #   type: aws s3
@@ -80,10 +80,16 @@ services:
 
 resolution-order:
   - local
-  - ex
-  - net
+  - 128a
+  - 128b
+  - 64a
+  - 64b
+  - 64c
+  - 64d
   - drive
-  - s3
+  # - ex
+  # - net
+  # - s3
 
 strategy:
   keep-copies: 2

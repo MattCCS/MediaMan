@@ -8,7 +8,7 @@ from mediaman.core import validation
 
 #     if validation.is_valid_uuid(name):
 #         return client.has_by_uuid(name)
-#     elif validation.is_valid_sha256(name):
+#     elif validation.is_valid_hash(name):
 #         return client.has_by_hash(name)
 #     else:
 #         return client.search_by_name(name)

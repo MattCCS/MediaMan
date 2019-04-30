@@ -75,3 +75,8 @@ HASH_FUNCTIONS = {
 def hash(path, preference=None):
     func = HASH_FUNCTIONS[preference or PREFERRED_HASH]
     return func(path)
+
+
+def is_preferred_hash(labeled_hash):
+    start = PREFERRED_HASH.value + DELIMITER
+    return labeled_hash.startswith(start)

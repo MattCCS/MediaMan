@@ -5,6 +5,7 @@ import shutil
 import tempfile
 
 from mediaman import config
+from mediaman.core import hashing
 from mediaman.core import logtools
 from mediaman.core import models
 from mediaman.core import validation
@@ -136,7 +137,7 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
     def download(self, root, identifier):
         # TODO: make some sort of identifier Enum
         # (hash, uuid, name, row #, ...)
-        if validation.is_valid_sha256(identifier):
+        if validation.is_valid_hash(identifier):
             func = methods.has_hash
         elif validation.is_valid_uuid(identifier):
             func = methods.has_uuid
@@ -170,12 +171,20 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
         list_files_results = list(gen_all(methods.list_files(self.clients)))
         capacity_results = list(gen_all(methods.capacity(self.clients)))
 
-        files_by_nickname = {rslt.client.nickname(): {f["hash"]: f for f in rslt.response} for rslt in list_files_results if rslt.response}
+        def has_preferred_hash(file):
+            return any(map(hashing.is_preferred_hash, file["hashes"]))
+
+        def preferred_hash(file):
+            for hash in file["hashes"]:
+                if hashing.is_preferred_hash(hash):
+                    return hash
+
+        files_by_nickname = {rslt.client.nickname(): {preferred_hash(f): f for f in rslt.response if has_preferred_hash(f)} for rslt in list_files_results if rslt.response}
         capacity_by_nickname = {rslt.client.nickname(): rslt.response.available() for rslt in capacity_results if rslt.response}
 
         from mediaman.core.strategies import distribution
         bins = capacity_by_nickname
-        items = {f["hash"]: f["size"] for fs in files_by_nickname.values() for f in fs.values()}
+        items = {hash: f["size"] for fs in files_by_nickname.values() for (hash, f) in fs.items()}
         logger.debug(f"Bins: {bins}")
         logger.debug(f"Total unique items: {len(items)}")
 
