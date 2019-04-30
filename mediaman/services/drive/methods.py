@@ -228,3 +228,10 @@ def capacity(drive, quota, folder_id=None):
         "total": total,
         "trashed": trashed,
     }
+
+
+def remove(drive, file_id):
+    drive.files().delete(fileId=file_id).execute()
+    return {
+        "id": file_id,
+    }

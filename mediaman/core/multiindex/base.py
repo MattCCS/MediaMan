@@ -33,7 +33,7 @@ class BaseMultiIndex(abstract.AbstractMultiIndex):
         resolve = partial(resolve_abs_path, root)
         abs_paths = list(map(resolve, file_paths))
         requests = (
-            models.Request(id=None, path=path, hash=hashing.hash(path))
+            models.Request(id=None, path=path)
             for path in abs_paths)
         yield from map(self.client.has, requests)
 
@@ -47,7 +47,7 @@ class BaseMultiIndex(abstract.AbstractMultiIndex):
         resolve = partial(resolve_abs_path, root)
         abs_paths = list(map(resolve, file_paths))  # TODO: fix this
         requests = (
-            models.Request(id=None, path=path, hash=hashing.hash(path))
+            models.Request(id=None, path=path)
             for path in abs_paths)
         yield from map(self.client.upload, requests)
 

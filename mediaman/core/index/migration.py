@@ -16,6 +16,9 @@ def repair_metadata(metadata_json):
     if metadata_json[VERSION_KEY] == 0:
         metadata_json = update_metadata_0_to_1(metadata_json)
 
+    if metadata_json[VERSION_KEY] == 1:
+        metadata_json = update_metadata_1_to_2(metadata_json)
+
     assert metadata_json[VERSION_KEY] == settings.VERSION
     return metadata_json
 
@@ -39,5 +42,19 @@ def update_metadata_0_to_1(metadata_json):
 
     return {
         VERSION_KEY: 1,
+        "files": files,
+    }
+
+
+def update_metadata_1_to_2(metadata_json):
+    assert metadata_json[VERSION_KEY] == 1
+
+    files = metadata_json["files"]
+    for file in files.values():
+        assert "merged_hashes" not in file
+        file["merged_hashes"] = []
+
+    return {
+        VERSION_KEY: 2,
         "files": files,
     }

@@ -1,4 +1,6 @@
 
+from mediaman.core import hashing
+
 
 def human_bytes(n):
     """Return the given bytes as a human-friendly string"""
@@ -42,6 +44,8 @@ class Request:
 
     @property
     def hash(self):
+        if self._hash is None:
+            self._hash = hashing.hash(self._path)
         return self._hash
 
     @hash.setter

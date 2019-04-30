@@ -74,7 +74,6 @@ class DriveService(service.AbstractService):
 
     @service.auth
     def remove(self, file_id):
-        raise NotImplementedError()
-        # return models.DriveReceiptFile(
-        #     methods.remove(self._drive, file_id)
-        # )
+        return models.DriveReceiptFile(
+            methods.remove(self._drive, file_id)
+        )

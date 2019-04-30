@@ -40,14 +40,16 @@ def make_temp_directory():
         shutil.rmtree(temp_dir)
 
 
-def create_file(id, name, sid, hashes, size):
+def create_file(id, name, sid, size, hashes, merged_hashes):
     assert isinstance(hashes, list)
+    assert isinstance(merged_hashes, list)
     return {
         "id": id,
         "name": name,
         "sid": sid,
-        "hashes": hashes,
         "size": size,
+        "hashes": hashes,
+        "merged_hashes": merged_hashes,
     }
 
 
@@ -70,6 +72,7 @@ class Index(base.BaseIndex):
         self.metadata = {}
         self.id_to_metadata_map = {}
         self.hash_to_metadata_map = {}
+        self.merged_hash_to_metadata_map = {}
 
     def files(self):
         return self.metadata["files"]
@@ -142,6 +145,7 @@ class Index(base.BaseIndex):
         self.metadata = metadata
         self.id_to_metadata_map = {v["id"]: k for (k, v) in self.files().items()}
         self.hash_to_metadata_map = {hash: k for (k, v) in self.files().items() for hash in v["hashes"]}
+        self.merged_hash_to_metadata_map = {hash: k for (k, v) in self.files().items() for hash in v["merged_hashes"]}
 
     @init
     def new_id(self):
@@ -152,7 +156,8 @@ class Index(base.BaseIndex):
 
     @init
     def get_metadata_by_hash(self, hash):
-        return self.files()[self.hash_to_metadata_map[hash]]
+        index = self.hash_to_metadata_map.get(hash, self.merged_hash_to_metadata_map.get(hash, None))
+        return self.files()[index]
 
     @init
     def get_metadata_by_uuid(self, uuid):
@@ -172,7 +177,7 @@ class Index(base.BaseIndex):
 
     @init
     def has_hash(self, hash):
-        return hash in self.hash_to_metadata_map
+        return hash in self.hash_to_metadata_map or hash in self.merged_hash_to_metadata_map
 
     @init
     def has_uuid(self, uuid):
@@ -184,27 +189,91 @@ class Index(base.BaseIndex):
 
     @init
     def upload(self, request):
+        name = pathlib.Path(request.path).name
+        size = os.stat(request.path).st_size
         hash = request.hash
+
         if self.has_hash(hash):
-            logger.info(f"    [*] (File already indexed: {request.path})")
+            logger.info(f"[-] (File already indexed: {request.path})")
             return self.get_metadata_by_hash(hash)
 
-        request = models.Request(
+        # TODO: make this a O(1) operation with a dict
+        # TODO: make this optional with a flag!
+        from fuzzywuzzy import fuzz
+        for f in self.files().values():
+            names_are_similar = (fuzz.token_set_ratio(name, f["name"]) > 90)
+
+            REQUIRE_SAME_SIZE = False
+            SAME_SIZE = ((not REQUIRE_SAME_SIZE) or (f["size"] == size))
+            if SAME_SIZE and names_are_similar:
+                print(f"New file '{(name, size, hash)}' is similar to existing file '{f}' ...")
+                if self.merge_into_existing_file(request, f):
+                    return self.get_metadata_by_hash(hash)
+
+            # elif names_are_similar:
+            #     print(f"New file '({name}, {size}, {hash}) is named similar to existing file '{f}', but sizes differ... skipping for now.")
+            #     return None
+
+        upload_request = models.Request(
             id=self.new_id(),
             path=request.path,
         )
-        receipt = self.service.upload(request)
+
+        logger.info(f"Uploading '{request}' as '{upload_request}' ...")
+        receipt = self.service.upload(upload_request)
 
         hashes = [hash]
+        merged_hashes = []
+
         self.track_file(create_file(
-            request.id,
-            pathlib.Path(request.path).name,
+            upload_request.id,
+            name,
             receipt.id(),
+            size,
             hashes,
-            os.stat(request.path).st_size,
+            merged_hashes,
         ))
 
         return self.get_metadata_by_hash(hash)
+
+    def merge_into_existing_file(self, request, exiting_file):
+        existing_hash = exiting_file["hashes"][-1]
+        new_hash = request.hash
+
+        if new_hash in self.merged_hash_to_metadata_map:
+            raise RuntimeError("Merged hash already present!")
+
+        choices = {
+            "1": exiting_file["name"],
+            "2": pathlib.Path(request.path).name,
+        }
+
+        for (k, v) in choices.items():
+            print(k, v)
+
+        inp = input("If you want to merge these files, which name to keep? [1/2/n] ")
+        if inp not in ('1', '2'):
+            return False
+
+        chosen_name = choices[inp]
+
+        info = self.get_metadata_by_hash(existing_hash)
+        logger.info(f"Old info: {info}")
+
+        info["name"] = chosen_name
+        info["merged_hashes"].append(new_hash)
+        logger.info(f"New info: {self.get_metadata_by_hash(existing_hash)}")
+
+        index = self.hash_to_metadata_map[existing_hash]
+        self.merged_hash_to_metadata_map[new_hash] = index
+
+        # inp = input("Look good? [Y/n] ")
+        # if inp not in 'Yy':
+        #     print("Cancelled.")
+        #     exit(1)
+
+        self.update_metadata()
+        return True
 
     @init
     def track_file(self, file):
@@ -214,6 +283,8 @@ class Index(base.BaseIndex):
         self.id_to_metadata_map[file["id"]] = new_index
         for hash in file["hashes"]:
             self.hash_to_metadata_map[hash] = new_index
+        for hash in file["merged_hashes"]:
+            self.merged_hash_to_metadata_map[hash] = new_index
 
         self.update_metadata()
 
@@ -290,8 +361,16 @@ class Index(base.BaseIndex):
 
             name = file_metadata["name"]
             hashes = file_metadata["hashes"]
+            merged_hashes = file_metadata["merged_hashes"]
 
-            new_file = create_file(id, name, sid, hashes, size)
+            new_file = create_file(
+                id,
+                name,
+                sid,
+                size,
+                hashes,
+                merged_hashes,
+            )
             new_files.append(new_file)
             logger.debug(new_file)
 
