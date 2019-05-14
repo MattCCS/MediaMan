@@ -131,10 +131,12 @@ def exists(drive, file_id, folder_id=None):
 def upload(drive, request, folder_id=None):
     # NOTE:  This method is idempotent iff no files are already duplicated.
 
+    # TODO: experiment with chunk size for huge files
     media_body = apiclient.http.MediaFileUpload(
         request.path,
         mimetype="application/octet-stream",  # NOTE: this is optional
         resumable=True,
+        # chunksize=1024 * 256
     )
 
     # The body contains the metadata for the file.
