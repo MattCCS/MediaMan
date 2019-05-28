@@ -197,23 +197,6 @@ class Index(base.BaseIndex):
             logger.info(f"[-] (File already indexed: {request.path})")
             return self.get_metadata_by_hash(hash)
 
-        # TODO: make this a O(1) operation with a dict
-        # TODO: make this optional with a flag!
-        from fuzzywuzzy import fuzz
-        for f in self.files().values():
-            names_are_similar = (fuzz.token_set_ratio(name, f["name"]) > 90)
-
-            REQUIRE_SAME_SIZE = False
-            SAME_SIZE = ((not REQUIRE_SAME_SIZE) or (f["size"] == size))
-            if SAME_SIZE and names_are_similar:
-                print(f"New file '{(name, size, hash)}' is similar to existing file '{f}' ...")
-                if self.merge_into_existing_file(request, f):
-                    return self.get_metadata_by_hash(hash)
-
-            # elif names_are_similar:
-            #     print(f"New file '({name}, {size}, {hash}) is named similar to existing file '{f}', but sizes differ... skipping for now.")
-            #     return None
-
         upload_request = models.Request(
             id=self.new_id(),
             path=request.path,
