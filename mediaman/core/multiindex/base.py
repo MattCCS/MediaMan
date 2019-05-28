@@ -1,6 +1,7 @@
 
 from functools import partial
 import pathlib
+import traceback
 from typing import List
 
 from mediaman.core import hashing
@@ -15,41 +16,49 @@ logger = logtools.new_logger("mediaman.core.multiindex.base")
 
 def resolve_abs_path(root, file_id):
     path = pathlib.Path(file_id)
-    if path.is_absolute():
-        if path.exists():
-            return path
+
+    if not path.is_absolute():
+        path = root / path
+    assert path.is_absolute()
+
+    if path.is_dir():
+        raise IsADirectoryError()
+
+    if not path.exists():
         raise FileNotFoundError()
 
-    rel_path = root / path
-    if rel_path.exists():
-        return rel_path
+    return path
 
-    raise FileNotFoundError()
+
+def resolve_abs_paths(root, file_ids):
+    for file_id in file_ids:
+        try:
+            yield resolve_abs_path(root, file_id)
+        except (IsADirectoryError, FileNotFoundError) as exc:
+            logger.debug(f"{traceback.format_exc()}: {file_id}")
 
 
 class BaseMultiIndex(abstract.AbstractMultiIndex):
 
     def has(self, root, *file_paths) -> List[abstractmodels.AbstractResultFile]:
-        resolve = partial(resolve_abs_path, root)
-        abs_paths = list(map(resolve, file_paths))
+        abs_paths = list(resolve_abs_paths(root, file_paths))
         requests = (
             models.Request(id=None, path=path)
             for path in abs_paths)
-        yield from map(self.client.has, requests)
+        yield from zip(abs_paths, map(self.client.has, requests))
 
     def search_by_name(self, *file_names) -> List[abstractmodels.AbstractResultFileList]:
-        yield from map(self.client.search_by_name, file_names)
+        yield from zip(file_names, map(self.client.search_by_name, file_names))
 
     def fuzzy_search_by_name(self, *file_names) -> List[abstractmodels.AbstractResultFileList]:
-        yield from map(self.client.fuzzy_search_by_name, file_names)
+        yield from zip(file_names, map(self.client.fuzzy_search_by_name, file_names))
 
     def upload(self, root, *file_paths) -> List[abstractmodels.AbstractReceiptFile]:
-        resolve = partial(resolve_abs_path, root)
-        abs_paths = list(map(resolve, file_paths))  # TODO: fix this
+        abs_paths = list(resolve_abs_paths(root, file_paths))
         requests = (
             models.Request(id=None, path=path)
             for path in abs_paths)
-        yield from map(self.client.upload, requests)
+        yield from zip(abs_paths, map(self.client.upload, requests))
 
     def download(self, root, *identifiers) -> List[abstractmodels.AbstractReceiptFile]:
         local_download = partial(self.client.download, root)

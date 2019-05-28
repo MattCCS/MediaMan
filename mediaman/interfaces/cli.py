@@ -202,13 +202,13 @@ def run_file_list(results, all_mode=False):
     def files_iterator(responses):
         nonlocal all_mode
         if not all_mode:
-            for file_results_list in responses:
+            for (request, file_results_list) in responses:
                 for item in file_results_list:
                     yield (item["name"], human_bytes(item["size"]), item["hashes"][-1], item["id"])
         else:
             # TODO: this is screwed up, need to stick to classes better
             all_responses = responses
-            for responses in all_responses:
+            for (request, responses) in all_responses:
                 for response_obj in responses:
                     if response_obj.response:
                         for item in response_obj.response:
@@ -271,14 +271,14 @@ def main():
 
         def inverted_iter(services, files, all_results, all_mode=False):
             if all_mode:
-                for (file_name, results) in zip(files, all_results):
+                for (request, results) in all_results:
                     service_map = {result.client.nickname(): ("No" if not result.response else "Yes") for result in results}
-                    yield (file_name,) + tuple(service_map.get(service, "--") for service in services)
+                    yield (request,) + tuple(service_map.get(service, "--") for service in services)
 
             else:
                 results = all_results
-                for (file_name, result) in zip(files, results):
-                    yield (file_name, ("No" if not result else "Yes"))
+                for (request, result) in results:
+                    yield (request, ("No" if not result else "Yes"))
 
         gen = watertable.table_stream(columns, inverted_iter(
             service_names, args.files, all_results, all_mode=all_mode))
