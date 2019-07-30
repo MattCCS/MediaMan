@@ -239,7 +239,7 @@ def main():
 
     if args.action in file_results_list_funcs:
         if args.action == "list":
-            results = [api.run_list(service_selector=service_selector)]
+            results = [(None, api.run_list(service_selector=service_selector))]
         elif args.action == "search":
             results = api.run_search(*args.files, service_selector=service_selector)
         elif args.action == "fuzzy":

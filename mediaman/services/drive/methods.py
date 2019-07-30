@@ -119,8 +119,9 @@ def list_file(drive, file_id):
 
 
 def exists(drive, file_id, folder_id=None):
+    # TODO: use folder_id param
     try:
-        list_file(drive, file_id, folder_id=folder_id)
+        list_file(drive, file_id)
         return True
     except googleapiclient.errors.HttpError as exc:
         if exc.resp["status"] == "404":
