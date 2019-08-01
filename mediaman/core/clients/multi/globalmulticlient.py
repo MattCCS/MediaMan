@@ -188,7 +188,9 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
         logger.debug(f"Bins: {bins}")
         logger.debug(f"Total unique items: {len(items)}")
 
-        old_dist = {nickname: set(hash for hash in files) for (nickname, files) in files_by_nickname.items()}
+        old_dist = {nickname: set() for nickname in bins}
+        for (nickname, files) in files_by_nickname.items():
+            old_dist[nickname] = set(hash for hash in files)
         new_dist = distribution.distribute(bins, items, distribution=old_dist)
 
         any_changes = False

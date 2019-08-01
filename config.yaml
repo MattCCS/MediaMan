@@ -34,7 +34,7 @@ services:
       GOOGLE_CREDENTIALS: credentials/drive/credentials/stored
   local:
     type: folder
-    quota: 20GB
+    quota: 50GB
     destination: /Users/matthewcotton/MediaMan
   localw:
     type: folder
