@@ -2,11 +2,12 @@
 import string
 
 
-SHA256_CHARS = frozenset(string.digits + string.ascii_lowercase[:6])
+BASE16_CHARS = frozenset(string.digits + string.ascii_lowercase[:6])
 
 
 def is_valid_uuid(string, version=4):
     import uuid
+    string = str(string)
     try:
         uuid.UUID(string, version=version)
         return True
@@ -15,7 +16,21 @@ def is_valid_uuid(string, version=4):
 
 
 def is_valid_sha256(string):
-    return (len(string) == 64) and (set(string) <= SHA256_CHARS)
+    string = str(string)
+    if string.startswith("sha256:"):
+        string = string[7:]
+    return (len(string) == 64) and (set(string) <= BASE16_CHARS)
+
+
+def is_valid_xxh64(string):
+    string = str(string)
+    if string.startswith("xxh64:"):
+        string = string[6:]
+    return (len(string) == 16) and (set(string) <= BASE16_CHARS)
+
+
+def is_valid_hash(string):
+    return is_valid_xxh64(string) or is_valid_sha256(string)
 
 
 def parse_human_bytes(human_bytes):
@@ -25,7 +40,7 @@ def parse_human_bytes(human_bytes):
     try:
         m = re.match(human_bytes_regex, human_bytes.strip())
         cap = float(m["cap"].replace("_", ""))
-        cap *= (1024 ** units[m["unit"]])
+        cap *= (1000 ** units[m["unit"]])
         return int(cap)
     except (KeyError, ValueError, TypeError) as exc:
         raise RuntimeError(f"Couldn't parse human bytes: {human_bytes}", exc)

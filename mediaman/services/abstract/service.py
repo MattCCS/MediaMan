@@ -18,6 +18,9 @@ class AbstractService(abc.ABC):
     def __init__(self, config: models.BaseConfig):
         self._config = config
 
+    def nickname(self):
+        return self._config.nickname
+
     @abc.abstractmethod
     def authenticate(self) -> None:
         """Authenticate with the service, if necessary."""
@@ -57,3 +60,11 @@ class AbstractService(abc.ABC):
     def capacity(self) -> models.AbstractResultQuota:
         """Return quota information for this service."""
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def remove(self, file_id) -> models.AbstractReceiptFile:
+        """Remove a file from the service."""
+        raise NotImplementedError()
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(\"{self.nickname()}\")"

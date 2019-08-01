@@ -8,11 +8,21 @@ class LocalConfig(models.BaseConfig):
 
 class LocalReceiptFile(models.AbstractReceiptFile):
 
-    def __init__(self, filename):
-        self.filename = filename
+    def __init__(self, data):
+        self.filename = data["id"]
 
     def id(self):
         return self.filename
+
+
+class LocalDownloadReceiptFile(models.AbstractDownloadReceiptFile, LocalReceiptFile):
+
+    def __init__(self, data):
+        super().__init__(data)
+        self._path = data["path"]
+
+    def path(self):
+        return self._path
 
 
 class LocalResultFile(models.AbstractResultFile):
@@ -23,16 +33,19 @@ class LocalResultFile(models.AbstractResultFile):
         self.file_extension = file_data["suffix"]
 
         stat = file_data["stat"]
-        self.size = stat.st_size,
-        self.accessedDate = stat.st_atime,
-        self.modifiedDate = stat.st_mtime,
-        self.createdDate = stat.st_ctime,
+        self._size = stat.st_size
+        self.accessedDate = stat.st_atime
+        self.modifiedDate = stat.st_mtime
+        self.createdDate = stat.st_ctime
 
     def id(self):
         return self.filename
 
     def name(self):
         return self.filename
+
+    def size(self):
+        return self._size
 
 
 class LocalResultFileList(models.AbstractResultFileList):

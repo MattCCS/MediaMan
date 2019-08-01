@@ -19,11 +19,22 @@ class DriveReceiptFile(models.AbstractReceiptFile):
         return self._id
 
 
+class DriveDownloadReceiptFile(models.AbstractDownloadReceiptFile, DriveReceiptFile):
+
+    def __init__(self, file_data):
+        super().__init__(file_data)
+        self._path = file_data["path"]
+
+    def path(self):
+        return self._path
+
+
 class DriveResultFile(models.AbstractResultFile):
 
     def __init__(self, file_data):
         self._id = file_data["id"]
         self.title = file_data.get("title", "")
+        self.file_size = int(file_data["fileSize"])
 
         self.md5_checksum = file_data.get("md5Checksum", "")
         self.kind = file_data.get("kind", "")
@@ -44,6 +55,9 @@ class DriveResultFile(models.AbstractResultFile):
 
     def name(self):
         return self.title
+
+    def size(self):
+        return self.file_size
 
 
 class DriveResultFileList(models.AbstractResultFileList):

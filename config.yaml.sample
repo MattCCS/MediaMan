@@ -16,54 +16,26 @@
 
 
 ### Service Types:
-# - folder
-# - dropbox
-# - google drive
-# - aws s3
-# - aws glacier
+# folder | dropbox | google drive | aws s3 | aws glacier
 
 
 # service configs
 services:
-  drive:
+  drive-example:
     type: google drive
-    quota: 2TB
+    quota: 180GB
     destination: MediaMan
     extra:
       GOOGLE_CLIENT_SECRETS: credentials/drive/client-secrets/client-secret.json
       GOOGLE_CREDENTIALS: credentials/drive/credentials/stored
-  local:
+  local-example:
     type: folder
     quota: 20GB
-    destination: /Users/matthewcotton/MediaMan
-  localw:
-    type: folder
-    quota: 20GB
-    destination: /Users/mattcotton/MediaMan
-  128a:
+    destination: /some/path/to/MediaMan
+  sd-card-example:
     type: folder
     quota: 127GB
-    destination: /Volumes/128GB-alpha/MediaMan
-  128b:
-    type: folder
-    quota: 127GB
-    destination: /Volumes/128GB-beta/MediaMan
-  64a:
-    type: folder
-    quota: 62GB
-    destination: /Volumes/64GB-alpha/MediaMan
-  64b:
-    type: folder
-    quota: 62GB
-    destination: /Volumes/64GB-beta/MediaMan
-  64c:
-    type: folder
-    quota: 62GB
-    destination: /Volumes/64GB-gamma/MediaMan
-  64d:
-    type: folder
-    quota: 62GB
-    destination: /Volumes/64GB-delta/MediaMan
+    destination: /Volumes/MySDCard/MediaMan
   # s3:
   #   type: aws s3
   #   quota: 10GB
@@ -79,25 +51,6 @@ services:
   #   destination: /Network/some-share/me
 
 resolution-order:
-  - local
-  - 128a
-  - 128b
-  - 64a
-  - 64b
-  - 64c
-  - 64d
-  - drive
-  # - ex
-  # - net
-  # - s3
-
-strategy:
-  keep-copies: 2
-  prefer-grouping:
-    video:
-      - ex
-      - net
-    music:
-      - drive
-      - ex
-      - net
+  - local-example
+  - sd-card-example
+  - drive-example

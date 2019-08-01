@@ -19,8 +19,9 @@ class Multiclient(abstract.AbstractMulticlient):
     def list_files(self):
         return gen_all(methods.list_files(self.clients))
 
-    def has(self, root, file_id):
-        return gen_all(methods.has(self.clients, root, file_id))
+    def has(self, request):
+        hash = request.hash
+        return gen_all(methods.has_hash(self.clients, hash))
 
     def search_by_name(self, file_name):
         return gen_all(methods.search_by_name(self.clients, file_name))
@@ -28,11 +29,21 @@ class Multiclient(abstract.AbstractMulticlient):
     def fuzzy_search_by_name(self, file_name):
         return gen_all(methods.fuzzy_search_by_name(self.clients, file_name))
 
-    def upload(self, file_path):
-        return gen_all(methods.upload(self.clients, file_path))
+    def upload(self, request):
+        path = request.path
+        return gen_all(methods.upload(self.clients, path))
 
-    def download(self, file_path):
+    def download(self, root, file_path):
         raise RuntimeError()  # `mm all get` isn't allowed
 
     def capacity(self):
         return gen_all(methods.capacity(self.clients))
+
+    def refresh(self):
+        raise RuntimeError()  # `mm all refresh` isn't allowed
+
+    def remove(self, request):
+        raise RuntimeError()  # `mm all remove` isn't allowed
+
+    def refresh_global_hashes(self, request):
+        raise NotImplementedError()

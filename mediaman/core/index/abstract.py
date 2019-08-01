@@ -10,6 +10,9 @@ class AbstractIndex(abstract.AbstractClient):
     def name(self):
         return self.service.__class__.__name__
 
+    def nickname(self):
+        return self.service.nickname()
+
     def __repr__(self):
         return f"{self.__class__.__name__}({repr(self.service)})"
 

@@ -41,11 +41,16 @@ class LocalService(service.AbstractService):
         )
 
     def download(self, request):
-        return models.LocalReceiptFile(
+        return models.LocalDownloadReceiptFile(
             methods.download(self.destination_path, request)
         )
 
     def capacity(self):
         return models.LocalResultQuota(
             methods.capacity(self.destination_path, self._config.quota)
+        )
+
+    def remove(self, file_id):
+        return models.LocalReceiptFile(
+            methods.remove(self.destination_path, file_id)
         )

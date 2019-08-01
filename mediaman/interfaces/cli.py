@@ -31,6 +31,7 @@ FUZZY_TEXT = "Search MediaMan for similar filename(s)"
 STATUS_TEXT = "Report on the status/availability of MediaMan"
 CAPACITY_TEXT = "Report on the visible capacity of MediaMan"
 CONFIG_TEXT = "Show the config info of MediaMan"
+REFRESH_TEXT = "Refresh the tracking info of MediaMan"
 
 LIST_TEXT_SERVICE = "List all files indexed by this service"
 HAS_TEXT_SERVICE = "Check whether this service has the given file(s)"
@@ -41,6 +42,8 @@ FUZZY_TEXT_SERVICE = "Search this service for similar filename(s)"
 STATUS_TEXT_SERVICE = "Report on the status/availability of this service"
 CAPACITY_TEXT_SERVICE = "Report on the visible capacity of this service"
 CONFIG_TEXT_SERVICE = "Show the config info of this service"
+REFRESH_TEXT_SERVICE = "Refresh the tracking info of this service"
+REMOVE_TEXT_SERVICE = "Remove the given file(s) from this service (by hash only)"
 
 
 class Action(enum.Enum):
@@ -56,6 +59,8 @@ class Action(enum.Enum):
     STATUS = "stat"
     CAPACITY = "cap"
     CONFIG = "config"
+    REFRESH = "refresh"
+    REMOVE = "remove"
 
 
 ACTIONS = frozenset(action.value for action in Action)
@@ -149,6 +154,10 @@ def add_commands(subparsers, service=None):
         add_parser(Action.SERVICES.value, description=SERVICES_TEXT)
         add_parser(Action.SYNC.value, description=SYNC_TEXT)
 
+    if service:
+        p_remove = add_parser(Action.REMOVE.value, description=f"[{service}] -- {REMOVE_TEXT_SERVICE}")
+        p_remove.add_argument("hashes", nargs="+")
+
     add_parser(Action.LIST.value, description=f"[{service}] -- {LIST_TEXT_SERVICE}" if service else LIST_TEXT)
     p_has = add_parser(Action.HAS.value, description=f"[{service}] -- {HAS_TEXT_SERVICE}" if service else HAS_TEXT)
     p_get = add_parser(Action.GET.value, description=f"[{service}] -- {GET_TEXT_SERVICE}" if service else GET_TEXT)
@@ -158,6 +167,7 @@ def add_commands(subparsers, service=None):
     add_parser(Action.STATUS.value, description=f"[{service}] -- {STATUS_TEXT_SERVICE}" if service else STATUS_TEXT)
     add_parser(Action.CAPACITY.value, description=f"[{service}] -- {CAPACITY_TEXT_SERVICE}" if service else CAPACITY_TEXT)
     add_parser(Action.CONFIG.value, description=f"[{service}] -- {CONFIG_TEXT_SERVICE}" if service else CONFIG_TEXT)
+    add_parser(Action.REFRESH.value, description=f"[{service}] -- {REFRESH_TEXT_SERVICE}" if service else REFRESH_TEXT)
 
     for parser in [p_has, p_get, p_put, p_search, p_fuzzy]:
         parser.add_argument("files", nargs="+")
@@ -167,21 +177,42 @@ def run_services():
     return api.get_service_names()
 
 
+def human_bytes(n):
+    """Return the given bytes as a human-friendly string"""
+
+    step = 1000
+    abbrevs = ['KB', 'MB', 'GB', 'TB']
+
+    if n < step:
+        return f"{n}B"
+
+    for abbrev in abbrevs:
+        n /= step
+        if n < step:
+            break
+
+    return f"{n:.2f}{abbrev}"
+
+
 def run_file_list(results, all_mode=False):
     from mediaman.core import watertable
 
-    columns = ((("service", 16),) if all_mode else ()) + (("name", 40 + (0 if all_mode else 19)), ("hash", 64), ("id", 36))
+    columns = ((("service", 16),) if all_mode else ()) + (("name", 40 + (0 if all_mode else 19)), ("size", 9), ("hash", 71), ("id", 36))
 
-    def files_iterator(file_results_list):
+    def files_iterator(responses):
         nonlocal all_mode
         if not all_mode:
-            for item in file_results_list:
-                yield (item["name"], item["hash"], item["id"])
+            for (request, file_results_list) in responses:
+                for item in file_results_list:
+                    yield (item["name"], human_bytes(item["size"]), item["hashes"][-1], item["id"])
         else:
-            for result in file_results_list:
-                if result.response:
-                    for item in result.response:
-                        yield (result.client.name(), item["name"], item["hash"], item["id"])
+            # TODO: this is screwed up, need to stick to classes better
+            all_responses = responses
+            for (request, responses) in all_responses:
+                for response_obj in responses:
+                    if response_obj.response:
+                        for item in response_obj.response:
+                            yield (response_obj.client.nickname(), item["name"], human_bytes(item["size"]), item["hashes"][-1], item["id"])
 
     gen = watertable.table_stream(columns, files_iterator(results))
     for row in gen:
@@ -208,11 +239,11 @@ def main():
 
     if args.action in file_results_list_funcs:
         if args.action == "list":
-            results = api.run_list(service_selector=service_selector)
+            results = [(None, api.run_list(service_selector=service_selector))]
         elif args.action == "search":
-            results = api.run_search(root, *args.files, service_selector=service_selector)
+            results = api.run_search(*args.files, service_selector=service_selector)
         elif args.action == "fuzzy":
-            results = api.run_fuzzy(root, *args.files, service_selector=service_selector)
+            results = api.run_fuzzy(*args.files, service_selector=service_selector)
         else:
             raise NotImplementedError()
 
@@ -227,39 +258,73 @@ def main():
         print(run_services())
         exit(0)
     elif args.action == "has":
-        results = api.run_has(root, *args.files, service_selector=service_selector)
-        if service_selector == "all":
-            columns = (("service", 16),) + tuple((file_name, max(3, len(file_name))) for file_name in args.files)
-            it = ((result.client.name(), ("No" if not result.response else "Yes")) for result in results)
-            gen = watertable.table_stream(columns, it)
-            for row in gen:
-                print(row)
+        all_results = api.run_has(root, *args.files, service_selector=service_selector)
+
+        service_names = sorted(set(api.get_service_names()) - set(["all"]))
+        max_filename = max(map(len, args.files))
+
+        columns = (("name", max(4, max_filename)),)
+        if all_mode:
+            columns += tuple((service, len(service)) for service in service_names)
         else:
-            print("Yes" if results else "No")
-            exit(not results)
-            # if results:
-            #     print(results)
-            # else:
-            #     s = 's' if (len(args.files) > 1) else ''
-            #     were = 'were' if (len(args.files) > 1) else 'was'
-            #     print(f"[-] No file{s} with the name{s} {args.files} {were} found.")
-            #     exit(1)
+            columns += (("found?", 6),)
+
+        def inverted_iter(services, files, all_results, all_mode=False):
+            if all_mode:
+                for (request, results) in all_results:
+                    service_map = {result.client.nickname(): ("No" if not result.response else "Yes") for result in results}
+                    yield (request,) + tuple(service_map.get(service, "--") for service in services)
+
+            else:
+                results = all_results
+                for (request, result) in results:
+                    yield (request, ("No" if not result else "Yes"))
+
+        gen = watertable.table_stream(columns, inverted_iter(
+            service_names, args.files, all_results, all_mode=all_mode))
+
+        for row in gen:
+            print(row)
+
+        # exit(1)
+
+        # if results:
+        #     print(results)
+        # else:
+        #     s = 's' if (len(args.files) > 1) else ''
+        #     were = 'were' if (len(args.files) > 1) else 'was'
+        #     print(f"[-] No file{s} with the name{s} {args.files} {were} found.")
+        #     exit(1)
     elif args.action == "get":
         results = api.run_get(root, *args.files, service_selector=service_selector)
-        print(repr(results))
+        for result in results:
+            print(repr(result))
     elif args.action == "put":
-        results = api.run_put(root, *args.files, service_selector=service_selector)
+        all_results = api.run_put(root, *args.files, service_selector=service_selector)
         if all_mode:
+            for results in all_results:
+                for result in results:
+                    print(repr(result))
+        else:
+            results = all_results
             for result in results:
                 print(repr(result))
-        else:
-            print(repr(results))
     elif args.action == "cap":
         results = api.run_cap(service_selector=service_selector)
         if service_selector != "all":
             results = [results]
         for result in results:
             print(result)
+    elif args.action == "sync":
+        results = api.run_sync(service_selector=service_selector)
+        print(repr(results))
+    elif args.action == Action.REFRESH.value:
+        results = api.run_refresh(service_selector=service_selector)
+        print(repr(results))
+    elif args.action == Action.REMOVE.value:
+        results = api.run_remove(*args.hashes, service_selector=service_selector)
+        for result in results:
+            print(repr(result))
     else:
         raise NotImplementedError()
 

@@ -2,14 +2,18 @@
 Class to manage a Service connection to Google Drive.
 """
 
+from mediaman.core import logtools
 from mediaman.services.abstract import service
 from mediaman.services.drive import methods
 from mediaman.services.drive import models
+
+logger = logtools.new_logger("mediaman.services.drive.service")
 
 
 class DriveService(service.AbstractService):
 
     def __init__(self, config):
+        logger.debug(f"Drive init")
         super().__init__(models.DriveConfig(config))
 
         self._drive = None
@@ -17,6 +21,7 @@ class DriveService(service.AbstractService):
         self._authenticated = False
 
     def authenticate(self):
+        logger.debug(f"Drive authenticated: {self._authenticated}")
         if self._authenticated:
             return
         self._drive = methods.authenticate(self._config.client_secrets, self._config.credentials)
@@ -57,7 +62,7 @@ class DriveService(service.AbstractService):
 
     @service.auth
     def download(self, request):
-        return models.DriveReceiptFile(
+        return models.DriveDownloadReceiptFile(
             methods.download(self._drive, request, folder_id=self._folder_id)
         )
 
@@ -65,4 +70,10 @@ class DriveService(service.AbstractService):
     def capacity(self):
         return models.DriveResultQuota(
             methods.capacity(self._drive, self._config.quota)
+        )
+
+    @service.auth
+    def remove(self, file_id):
+        return models.DriveReceiptFile(
+            methods.remove(self._drive, file_id)
         )

@@ -81,22 +81,47 @@ def authenticate(client_secrets, credentials_path):
     return service
 
 
-def list_files(drive, folder_id=None):
+def xlist_files(drive, folder_id=None):
     # NOTE: any children() call to Drive returns Child objects, without names!
     if folder_id:
-        return drive.children().list(folderId=folder_id).execute()
+        # return drive.children().list(folderId=folder_id).execute()
+        return drive.files().list(q=f"'{folder_id}' in parents").execute()
     return drive.files().list().execute()
 
 
-def list_file(drive, file_id, folder_id=None):
-    if folder_id:
-        return drive.children().get(childId=file_id, folderId=folder_id).execute()
+def list_files(drive, folder_id=None):
+    result = []
+    page_token = None
+    while True:
+        try:
+            param = {}
+            if folder_id:
+                param['q'] = f"'{folder_id}' in parents"
+            if page_token:
+                param['pageToken'] = page_token
+
+            files = drive.files().list(**param).execute()
+
+            result.extend(files['items'])
+            page_token = files.get('nextPageToken')
+            if not page_token:
+                break
+        # except errors.HttpError as error:
+        except Exception as error:
+            print('An error occurred: %s' % error)
+
+    logger.debug(len(result))
+    return {"items": result}
+
+
+def list_file(drive, file_id):
     return drive.files().get(fileId=file_id).execute()
 
 
 def exists(drive, file_id, folder_id=None):
+    # TODO: use folder_id param
     try:
-        list_file(drive, file_id, folder_id=folder_id)
+        list_file(drive, file_id)
         return True
     except googleapiclient.errors.HttpError as exc:
         if exc.resp["status"] == "404":
@@ -107,10 +132,12 @@ def exists(drive, file_id, folder_id=None):
 def upload(drive, request, folder_id=None):
     # NOTE:  This method is idempotent iff no files are already duplicated.
 
+    # TODO: experiment with chunk size for huge files
     media_body = apiclient.http.MediaFileUpload(
         request.path,
         mimetype="application/octet-stream",  # NOTE: this is optional
         resumable=True,
+        # chunksize=1024 * 256
     )
 
     # The body contains the metadata for the file.
@@ -164,10 +191,10 @@ def download(drive, request, folder_id=None):
             raise
 
         if download_progress:
-            logger.info(f"[ ] Downloading... {download_progress.progress():.2%}")
+            logger.debug(f"[ ] Downloading... {download_progress.progress():.2%}")
 
         if done:
-            logger.info("[+] Download complete.")
+            logger.debug("[+] Download complete.")
             break
 
     return {
@@ -178,15 +205,14 @@ def download(drive, request, folder_id=None):
 
 def search_by_name(drive, file_name, folder_id=None):
     if folder_id:
-        request = drive.children().list(
-            folderId=folder_id,
-            q=f"title='{file_name}'",
-            fields="items(id)",
+        request = drive.files().list(
+            q=f"title='{file_name}' and '{folder_id}' in parents",
+            fields="items(id, fileSize)",
         )
     else:
         request = drive.files().list(
             q=f"title='{file_name}'",
-            fields="items(id)",
+            fields="items(id, fileSize)",
         )
 
     files = request.execute()
@@ -204,4 +230,11 @@ def capacity(drive, quota, folder_id=None):
         "quota": quota,
         "total": total,
         "trashed": trashed,
+    }
+
+
+def remove(drive, file_id):
+    drive.files().delete(fileId=file_id).execute()
+    return {
+        "id": file_id,
     }

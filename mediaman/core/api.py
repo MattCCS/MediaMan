@@ -31,18 +31,18 @@ def run_has(root, *file_names, service_selector=None):
 
 
 def run_get(root, *file_names, service_selector=None):
-    return policy.load_client(service_selector=service_selector).download(*file_names)
+    return policy.load_client(service_selector=service_selector).download(root, *file_names)
 
 
 def run_put(root, *file_names, service_selector=None):
-    return policy.load_client(service_selector=service_selector).upload(*file_names)
+    return policy.load_client(service_selector=service_selector).upload(root, *file_names)
 
 
-def run_search(root, *file_names, service_selector=None):
+def run_search(*file_names, service_selector=None):
     return policy.load_client(service_selector=service_selector).search_by_name(*file_names)
 
 
-def run_fuzzy(root, *file_names, service_selector=None):
+def run_fuzzy(*file_names, service_selector=None):
     return policy.load_client(service_selector=service_selector).fuzzy_search_by_name(*file_names)
 
 
@@ -60,3 +60,15 @@ def get_service_names():
 
 def get_service_description(service_selector):
     return policy.load_policy().load_service_description(service_selector)
+
+
+def run_sync(service_selector=None):
+    return policy.load_client(service_selector=service_selector).sync()
+
+
+def run_refresh(service_selector=None):
+    return policy.load_client(service_selector=service_selector).refresh()
+
+
+def run_remove(*identifiers, service_selector=None):
+    return policy.load_client(service_selector=service_selector).remove(*identifiers)

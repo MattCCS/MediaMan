@@ -7,8 +7,8 @@ class SimpleSingleClient(abstract.AbstractSingleClient):
     def list_files(self):
         return list(self.index.list_files())
 
-    # def has(self, file_id):
-    #     return self.index.has_file(file_id)
+    def has(self, file_id):
+        raise NotImplementedError()  # TODO
 
     def search_by_name(self, file_name):
         return list(self.index.search_by_name(file_name))
@@ -19,8 +19,8 @@ class SimpleSingleClient(abstract.AbstractSingleClient):
     def upload(self, file_path):
         return self.index.upload(file_path)
 
-    def download(self, file_path):
-        return [self.index.download(file_path)]
+    def download(self, root, file_path):
+        return [self.index.download(root, file_path)]
 
     def capacity(self):
         return self.index.capacity()

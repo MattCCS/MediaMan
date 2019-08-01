@@ -1,5 +1,6 @@
 
-from typing import Mapping
+import copy
+from typing import Mapping, Set
 
 import sortedcontainers
 
@@ -24,7 +25,7 @@ class Item(Obj):
 def human_bytes(n):
     """Return the given bytes as a human-friendly string"""
 
-    step = 1024
+    step = 1000
     abbrevs = ['KB', 'MB', 'GB', 'TB']
 
     if n < step:
@@ -38,7 +39,10 @@ def human_bytes(n):
     return f"{n:.2f}{abbrev}"
 
 
-def fast_optimal(bins: Mapping[str, int], items: Mapping[str, int]):
+def fast_optimal(
+        bins: Mapping[str, int],
+        items: Mapping[str, int],
+        distribution: Mapping[str, Set[str]]=None):
     """
     Assign a near-optimal distribution of items to bins, quickly.
 
@@ -47,37 +51,47 @@ def fast_optimal(bins: Mapping[str, int], items: Mapping[str, int]):
     @return distribution Mapping of bin identifier to set of item identifiers
     """
 
-    distribution = {k: set() for k in bins}
+    distribution = {k: set() for k in bins} if not distribution else distribution
 
     bin_queue = sortedcontainers.SortedList(key=lambda bin: bin.n)
     bin_queue.update(Bin(k, v) for k, v in bins.items())
-    print(bin_queue)
+    # print(bin_queue)
 
     items_queue = sorted((Item(k, v) for k, v in items.items()), key=lambda item: item.n)
+    # print(items_queue)
 
     while items_queue:
+        no_change = True
         trim_items = 0
 
         if items_queue[0].n > bin_queue[-1].n:
             print(f"All remaining items too large for bins.")
-            print(items_queue[0], bin_queue[-1])
+            # print(items_queue[0], bin_queue[-1])
             break
 
         for item in reversed(items_queue):
-            try:
-                # find smallest bin larger than item
-                bin = bin_queue.pop(bin_queue.bisect_left(item))
-            except IndexError:
+
+            # find smallest bin larger than item
+            for index in range(bin_queue.bisect_left(item), len(bin_queue)):
+                if item.id not in distribution[bin_queue[index].id]:
+                    bin = bin_queue.pop(index)
+                    break
+            else:
                 # item is too large for any bin
+                # (that doesn't already have it)
+                no_change = False
                 trim_items += 1
                 continue
 
-            if item.id in distribution[bin.id]:
-                continue
+            if item.id not in distribution[bin.id]:
+                distribution[bin.id].add(item.id)
+                bin = Bin(bin.id, bin.n - item.n)
+                no_change = False
 
-            distribution[bin.id].add(item.id)
-            bin = Bin(bin.id, bin.n - item.n)
             bin_queue.add(bin)
+
+        if no_change:
+            break
 
         if trim_items:
             items_queue = items_queue[:-trim_items]
@@ -85,7 +99,12 @@ def fast_optimal(bins: Mapping[str, int], items: Mapping[str, int]):
     return distribution
 
 
-def distribute(bins, items):
+def distribute(bins, items, distribution=None):
+    bins = copy.deepcopy(bins)
+    items = copy.deepcopy(items)
+    if distribution is not None:
+        distribution = copy.deepcopy(distribution)
+
     total = []
 
     total_size = sum(size for size in items.values())
@@ -97,13 +116,14 @@ def distribute(bins, items):
             bin = (bin_id, bin_cap - total_size)
             total.append(bin)
             del bins[bin_id]
-    print(list((bin_id, human_bytes(bin_cap)) for bin_id, bin_cap in total))
+            del distribution[bin_id]
+    # print(list((bin_id, human_bytes(bin_cap)) for bin_id, bin_cap in total))
 
     if not bins:
         print("distribution not necessary!")
         return
 
-    dist = fast_optimal(bins, items)
+    dist = fast_optimal(bins, items, distribution=distribution)
     dist.update({bin[0]: set(items) for bin in total})
     # print(dist)
 
@@ -117,26 +137,29 @@ def distribute(bins, items):
     print(f"availability: {availability}")
     # print(f"No presence: {list((i, items[i]) for (i, v) in pres.items() if not v)}")
 
+    return dist
 
-# distribute({'drive': 10, 'local': 20, 'net': 200}, {'a': 113, 'b': 118, 'c': 25, 'd': 4, 'e': 4, 'f': 6})
-import random
-KB = 1024**1
-MB = 1024**2
-GB = 1024**3
 
-import cProfile
-profile = cProfile.Profile()
-profile.disable()
+def test():
+    # distribute({'drive': 10, 'local': 20, 'net': 200}, {'a': 113, 'b': 118, 'c': 25, 'd': 4, 'e': 4, 'f': 6})
+    import random
+    KB = 1024**1
+    MB = 1024**2
+    GB = 1024**3
 
-bins = {'net': 400 * GB, 'drive': 100 * GB, 'local': 20 * GB, 'dropbox': 20 * GB, 'b1': 20 * GB, 'b2': 20 * GB, 'b3': 20 * GB}
-items = {str(random.random()): random.randint(1 * KB, 1 * MB) for i in range(100000)}
+    import cProfile
+    profile = cProfile.Profile()
+    profile.disable()
 
-# profile.enable()
-distribute(bins, items)
-profile.disable()
+    bins = {'net': 400 * GB, 'drive': 100 * GB, 'local': 20 * GB, 'dropbox': 20 * GB, 'b1': 20 * GB, 'b2': 20 * GB, 'b3': 20 * GB}
+    items = {str(random.random()): random.randint(1 * KB, 1 * MB) for i in range(100000)}
 
-# profile.print_stats()
+    # profile.enable()
+    distribute(bins, items)
+    profile.disable()
 
-# distribute(
-#     dict(zip('123', (5, 11, 23))),
-#     dict(zip('ABCD', (2, 4, 8, 16))))
+    # profile.print_stats()
+
+    # distribute(
+    #     dict(zip('123', (5, 11, 23))),
+    #     dict(zip('ABCD', (2, 4, 8, 16))))
