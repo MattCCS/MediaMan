@@ -6,6 +6,10 @@ from mediaman.middleware import simple
 
 class EncryptionMiddlewareService(simple.SimpleMiddleware):
 
+    ENCRYPTION_MIDDLEWARE_FILENAME = "index"
+    ENCRYPTION_MIDDLEWARE_COMMAND_PATH_DEFAULT = "/usr/bin/openssl"
+    ENCRYPTION_MIDDLEWARE_COMMAND_PATH = "/usr/local/Cellar/libressl/2.9.2/bin/openssl"
+
     def encrypt(self, file_path):
         tempfile_ref = tempfile.NamedTemporaryFile(mode="wb+")
         with open(file_path, "rb") as infile:
