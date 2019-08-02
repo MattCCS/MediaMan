@@ -53,7 +53,10 @@ def create_file(id, name, sid, size, hashes, merged_hashes):
     }
 
 
-def create_metadata(files):
+def create_metadata(files=None):
+    if files is None:
+        files = {}
+
     return {
         "version": settings.VERSION,
         "files": files,
@@ -91,7 +94,9 @@ class Index(base.BaseIndex):
         if len(files) > 1:
             raise RuntimeError(ERROR_MULTIPLE_REMOTE_INDICES.format(self.service))
 
+        # new index file
         if not files:
+            self.metadata = create_metadata()
             self.update_metadata()
         else:
             self.load_metadata(files[0])
@@ -358,7 +363,7 @@ class Index(base.BaseIndex):
             logger.debug(new_file)
 
         new_metadata_files = {str(i): v for (i, v) in dict(enumerate(new_files)).items()}
-        new_metadata = create_metadata(new_metadata_files)
+        new_metadata = create_metadata(files=new_metadata_files)
         logger.info(f"New metadata: {new_metadata}")
 
         inp = input("Does everything look good? [Y/n] ")

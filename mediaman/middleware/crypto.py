@@ -22,10 +22,11 @@ def init(func):
     return wrapped
 
 
-# <openssl> enc -<e/d> -<cipher> -kfile <keypath> -in <inpath> -out <outpath>
-CIPHER = "aes-256-cbc"
+# <openssl> enc -<e/d> -<cipher> -kfile <keypath> -md <digest> -in <inpath> -out <outpath>
+DEFAULT_CIPHER = "aes-256-cbc"
+DEFAULT_DIGEST = "sha256"
 CRYPTO_KEY_ENV_VAR = "MM_CRYPTO_KEY"
-DEFAULT_KEY_PATH = "~/.mediaman/key"
+DEFAULT_KEY_PATH = os.path.expanduser("~/.mediaman/key")
 
 KEYPATH = config.load(CRYPTO_KEY_ENV_VAR, default=DEFAULT_KEY_PATH)
 
@@ -50,10 +51,42 @@ def form_subprocess_environ():
     return new_env
 
 
-def create_metadata():
+def encrypt(request, keypath, cipher, digest):
+    tempfile_ref = tempfile.NamedTemporaryFile(mode="wb+", delete=True)
+
+    args = [
+        "openssl", "enc", "-e",
+        "-in", str(request.path),
+        "-out", str(tempfile_ref.name),
+        "-kfile", keypath, f"-{cipher}", "-md", digest,
+    ]
+    logger.debug(f"encrypting: {args}")
+
+    subprocess.check_output(args, stderr=subprocess.PIPE, env=form_subprocess_environ())
+
+    tempfile_ref.seek(0)
+    return tempfile_ref
+
+
+def decrypt(source, destination, keypath, cipher, digest):
+    args = [
+        "openssl", "enc", "-d",
+        "-in", str(source),
+        "-out", str(destination),
+        "-kfile", keypath, f"-{cipher}", "-md", digest,
+    ]
+    logger.debug(f"decrypting: {args}")
+
+    subprocess.check_output(args, stderr=subprocess.PIPE, env=form_subprocess_environ())
+
+
+def create_metadata(data=None):
+    if data is None:
+        data = {}
+
     return {
         "version": settings.VERSION,
-        "ciphers": {},
+        "data": data,
     }
 
 
@@ -65,12 +98,12 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
         super().__init__(service)
         logger.debug(f"EncryptionMiddlewareService init for {service}")
 
+        self.metadata_id = None
         self.metadata = None
 
     def init_metadata(self):
         if self.metadata is not None:
             return
-        self.metadata = create_metadata()
 
         # TODO: implement
         file_list = self.service.search_by_name(EncryptionMiddlewareService.MIDDLEWARE_FILENAME)
@@ -80,6 +113,7 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
             raise RuntimeError(ERROR_MULTIPLE_REMOTE_FILES.format(self.service))
 
         if not files:
+            self.metadata = create_metadata()
             self.update_metadata()
         else:
             self.load_metadata(files[0])
@@ -96,15 +130,15 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
             receipt = self.service.upload(request)
 
         logger.debug(f"update_metadata receipt: {receipt}")
-        self.index_id = receipt.id()
+        self.metadata_id = receipt.id()
 
-    def load_metadata_json(self, index):
-        logger.debug(f"load_metadata_json index: {index}")
-        self.index_id = index.id()
+    def load_metadata_json(self, metadata_file):
+        logger.debug(f"load_metadata_json file: {metadata_file}")
+        self.metadata_id = metadata_file.id()
 
         with tempfile.NamedTemporaryFile("w+", delete=True) as tempfile_ref:
             request = models.Request(
-                id=self.index_id,
+                id=self.metadata_id,
                 path=tempfile_ref.name,
             )
 
@@ -113,8 +147,8 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
 
             return json.loads(tempfile_ref.read())
 
-    def load_metadata(self, index):
-        self.metadata = self.load_metadata_json(index)
+    def load_metadata(self, metadata_file):
+        self.metadata = self.load_metadata_json(metadata_file)
         logger.debug(f"Loaded metadata: {self.metadata}")
 
         if "version" not in self.metadata:
@@ -123,65 +157,43 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
 
         version = self.metadata["version"]
         if version > settings.VERSION:
-            logger.critical(f"Metadata version ({version}) exceeds software version ({settings.VERSION}).  You need to update your software to parse this index file.")
+            logger.critical(f"Metadata version ({version}) exceeds software version ({settings.VERSION}).  You need to update your software to parse this metadata file.")
             raise RuntimeError("Outdated software")
 
         if version < settings.VERSION:
             logger.critical(f"Metadata version ({version}) is below software version ({settings.VERSION}).  You need to update it by running `mm <service> refresh`.")
             raise RuntimeError("Outdated metadata")
 
-    def encrypt(self, request):
-        global CIPHER, KEYPATH
-
-        tempfile_ref = tempfile.NamedTemporaryFile(mode="wb+", delete=True)
-
-        args = [
-            "openssl", "enc", "-e", f"-{CIPHER}",
-            "-kfile", KEYPATH,
-            "-in", request.path,
-            "-out", tempfile_ref.name,
-        ]
-        logger.debug(f"encrypting: {args}")
-
-        subprocess.check_output(args, stderr=subprocess.PIPE, env=form_subprocess_environ())
-
-        tempfile_ref.seek(0)
-        return tempfile_ref
-
-    def decrypt(self, source, destination):
-        global CIPHER, KEYPATH
-
-        args = [
-            "openssl", "enc", "-d", f"-{CIPHER}",
-            "-kfile", KEYPATH,
-            "-in", source,
-            "-out", destination,
-        ]
-        logger.debug(f"decrypting: {args}")
-
-        subprocess.check_output(args, stderr=subprocess.PIPE, env=form_subprocess_environ())
-
-    def track_cipher(self, key):
+    def track_cipher(self, key, cipher, digest):
         global CIPHER
-        if key not in self.metadata["ciphers"]:
-            self.metadata["ciphers"][key] = {}
-        self.metadata["ciphers"][key] = CIPHER
+        self.metadata["data"][key] = {"cipher": cipher, "digest": digest}
+        self.update_metadata()
 
     def upload(self, request):
-        print(request)
-        self.track_cipher(request.id)
-        print(self.metadata)
-        exit()
+        # TODO: remove metadata when file is deleted
+        keypath = KEYPATH
+        cipher = DEFAULT_CIPHER
+        digest = DEFAULT_DIGEST
 
-        raise NotImplementedError()
-        # with self.encrypt(request.path) as encrypted_tempfile:
-        #     request.path = encrypted_tempfile.name
-        #     receipt = self.service.upload(request)
+        with encrypt(request, keypath, cipher, digest) as encrypted_tempfile:
+            request.path = encrypted_tempfile.name
+            receipt = self.service.upload(request)
+
+        self.track_cipher(request.id, cipher, digest)
+        return receipt
 
     def download(self, request):
-        if request.id not in self.metadata["ciphers"]:
+        logger.debug(f"metadata: {self.metadata}")
+        if request.id not in self.metadata["data"]:
             return self.service.download(request)
 
+        params = self.metadata["data"][request.id]
+
+        keypath = KEYPATH
+        cipher = params["cipher"]
+        digest = params["digest"]
+
+        logger.debug(f"Downloading encrypted file: {request}")
         with tempfile.NamedTemporaryFile("wb+", delete=True) as tempfile_ref:
             temp_request = models.Request(
                 id=request.id,
@@ -191,6 +203,9 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
             receipt = self.service.download(temp_request)
             tempfile_ref.seek(0)
 
-            self.decrypt(tempfile_ref.name, request.path)
+            decrypt(tempfile_ref.name, request.path, keypath, cipher, digest)
+
+        logger.debug(f"temp_request: {temp_request}")
+        logger.debug(f"receipt: {receipt}")
 
         return receipt

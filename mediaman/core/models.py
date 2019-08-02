@@ -53,7 +53,8 @@ class Request:
         self._hash = value
 
     def __repr__(self):
-        return f"Request({self.id}, {self.path}, {self.hash})"
+        # logging should not trigger a call to hash
+        return f"Request({self.id}, {self.path}, {self._hash})"
 
 
 class Response:
