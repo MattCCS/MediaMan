@@ -82,6 +82,10 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
     def list_files(self):
         deduped_results = set()
         for result in gen_all(methods.list_files(self.clients)):
+            if result.response is None:
+                logger.debug(f"Response is missing, can't parse result: {result}")
+                continue
+
             for each in result.response:
                 hashes = each["hashes"]
                 if not set(hashes) & deduped_results:

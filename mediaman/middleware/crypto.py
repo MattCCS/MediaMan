@@ -62,6 +62,7 @@ def encrypt(request, keypath, cipher, digest):
     ]
     logger.debug(f"encrypting: {args}")
 
+    logger.info(f"Encrypting file...")
     subprocess.check_output(args, stderr=subprocess.PIPE, env=form_subprocess_environ())
 
     tempfile_ref.seek(0)
@@ -77,7 +78,19 @@ def decrypt(source, destination, keypath, cipher, digest):
     ]
     logger.debug(f"decrypting: {args}")
 
-    subprocess.check_output(args, stderr=subprocess.PIPE, env=form_subprocess_environ())
+    logger.info(f"Decrypting file...")
+    try:
+        subprocess.check_output(args, stderr=subprocess.PIPE, env=form_subprocess_environ())
+    except subprocess.CalledProcessError as exc:
+        err_text = exc.stderr.decode("utf-8")
+
+        logger.debug(exc)
+        if err_text.startswith("bad decrypt"):
+            logger.fatal(f"Decryption failed -- encryption key is incorrect.")
+        else:
+            logger.fatal(f"Decryption failed -- generic error: {err_text}")
+
+        raise
 
 
 def create_metadata(data=None):
@@ -179,12 +192,12 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
             request.path = encrypted_tempfile.name
             receipt = self.service.upload(request)
 
-        self.track_cipher(request.id, cipher, digest)
+        self.track_cipher(receipt.id, cipher, digest)  # IMPORTANT -- must track by sid!
         return receipt
 
     def download(self, request):
-        logger.debug(f"metadata: {self.metadata}")
         if request.id not in self.metadata["data"]:
+            logger.debug(f"Downloading unencrypted file: {request}")
             return self.service.download(request)
 
         params = self.metadata["data"][request.id]
@@ -204,8 +217,5 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
             tempfile_ref.seek(0)
 
             decrypt(tempfile_ref.name, request.path, keypath, cipher, digest)
-
-        logger.debug(f"temp_request: {temp_request}")
-        logger.debug(f"receipt: {receipt}")
 
         return receipt

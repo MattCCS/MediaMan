@@ -197,7 +197,7 @@ def human_bytes(n):
 def run_file_list(results, all_mode=False):
     from mediaman.core import watertable
 
-    columns = ((("service", 16),) if all_mode else ()) + (("name", 40 + (0 if all_mode else 19)), ("size", 9), ("hash", 71), ("id", 36))
+    columns = ((("service", 16),) if all_mode else ()) + (("name", 39 + (0 if all_mode else 19)), ("size", 9), ("hash", 22), ("id", 36))
 
     def files_iterator(responses):
         nonlocal all_mode
