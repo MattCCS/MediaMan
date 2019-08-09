@@ -192,7 +192,7 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
             request.path = encrypted_tempfile.name
             receipt = self.service.upload(request)
 
-        self.track_cipher(receipt.id, cipher, digest)  # IMPORTANT -- must track by sid!
+        self.track_cipher(receipt.id(), cipher, digest)  # IMPORTANT -- must track by sid!
         return receipt
 
     def download(self, request):
