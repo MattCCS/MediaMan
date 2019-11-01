@@ -1,22 +1,6 @@
 
-import pathlib
-
 from mediaman.core import validation
 from mediaman.core.clients.single import abstract
-
-
-def resolve_abs_path(root, file_id):
-    path = pathlib.Path(file_id)
-    if path.is_absolute():
-        if path.exists():
-            return path
-        raise FileNotFoundError()
-
-    rel_path = root / path
-    if rel_path.exists():
-        return rel_path
-
-    return None
 
 
 class SingleClient(abstract.AbstractSingleClient):

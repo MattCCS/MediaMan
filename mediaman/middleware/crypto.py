@@ -60,7 +60,7 @@ def encrypt(request, keypath, cipher, digest):
         "-out", str(tempfile_ref.name),
         "-kfile", keypath, f"-{cipher}", "-md", digest,
     ]
-    logger.debug(f"encrypting: {args}")
+    logger.info(f"encrypting: {args}")
 
     logger.info(f"Encrypting file...")
     subprocess.check_output(args, stderr=subprocess.PIPE, env=form_subprocess_environ())
@@ -76,7 +76,7 @@ def decrypt(source, destination, keypath, cipher, digest):
         "-out", str(destination),
         "-kfile", keypath, f"-{cipher}", "-md", digest,
     ]
-    logger.debug(f"decrypting: {args}")
+    logger.info(f"decrypting: {args}")
 
     logger.info(f"Decrypting file...")
     try:
@@ -109,7 +109,7 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
 
     def __init__(self, service):
         super().__init__(service)
-        logger.debug(f"EncryptionMiddlewareService init for {service}")
+        logger.info(f"EncryptionMiddlewareService init for {service}")
 
         self.metadata_id = None
         self.metadata = None
@@ -142,11 +142,11 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
             )
             receipt = self.service.upload(request)
 
-        logger.debug(f"update_metadata receipt: {receipt}")
+        logger.info(f"update_metadata receipt: {receipt}")
         self.metadata_id = receipt.id()
 
     def load_metadata_json(self, metadata_file):
-        logger.debug(f"load_metadata_json file: {metadata_file}")
+        logger.info(f"load_metadata_json file: {metadata_file}")
         self.metadata_id = metadata_file.id()
 
         with tempfile.NamedTemporaryFile("w+", delete=True) as tempfile_ref:
@@ -197,7 +197,7 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
 
     def download(self, request):
         if request.id not in self.metadata["data"]:
-            logger.debug(f"Downloading unencrypted file: {request}")
+            logger.info(f"Downloading unencrypted file: {request}")
             return self.service.download(request)
 
         params = self.metadata["data"][request.id]
@@ -206,7 +206,7 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
         cipher = params["cipher"]
         digest = params["digest"]
 
-        logger.debug(f"Downloading encrypted file: {request}")
+        logger.info(f"Downloading encrypted file: {request}")
         with tempfile.NamedTemporaryFile("wb+", delete=True) as tempfile_ref:
             temp_request = models.Request(
                 id=request.id,

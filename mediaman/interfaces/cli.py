@@ -261,7 +261,9 @@ def main():
         all_results = api.run_has(root, *args.files, service_selector=service_selector)
 
         service_names = sorted(set(api.get_service_names()) - set(["all"]))
-        max_filename = max(map(len, args.files))
+        max_filename = max([len(str(pathlib.Path(f).absolute())) for f in args.files])
+        print([str(pathlib.Path(f).absolute()) for f in args.files])
+        print(max_filename)
 
         columns = (("name", max(4, max_filename)),)
         if all_mode:
