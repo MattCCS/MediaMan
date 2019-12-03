@@ -108,6 +108,10 @@ def upload(clients, file_path) -> Iterable[models.Response]:
     return apply_consecutive(clients, "upload", file_path)
 
 
+def stats(clients) -> Iterable[models.Response]:
+    return apply_consecutive(clients, "stats")
+
+
 def capacity(clients) -> Iterable[models.Response]:
     return apply_consecutive(clients, "capacity")
 

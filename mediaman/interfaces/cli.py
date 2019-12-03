@@ -28,7 +28,7 @@ GET_TEXT = "Retrieve the given file(s) from MediaMan"
 PUT_TEXT = "Save the given file(s) to MediaMan"
 SEARCH_TEXT = "Search MediaMan for the given filename(s)"
 FUZZY_TEXT = "Search MediaMan for similar filename(s)"
-STATUS_TEXT = "Report on the status/availability of MediaMan"
+STATS_TEXT = "Show the stats for Mediaman"
 CAPACITY_TEXT = "Report on the visible capacity of MediaMan"
 CONFIG_TEXT = "Show the config info of MediaMan"
 REFRESH_TEXT = "Refresh the tracking info of MediaMan"
@@ -39,7 +39,7 @@ GET_TEXT_SERVICE = "Retrieve the given file(s) from this service"
 PUT_TEXT_SERVICE = "Save the given file(s) to this service"
 SEARCH_TEXT_SERVICE = "Search this service for the given filename(s)"
 FUZZY_TEXT_SERVICE = "Search this service for similar filename(s)"
-STATUS_TEXT_SERVICE = "Report on the status/availability of this service"
+STATS_TEXT_SERVICE = "Show the stats for this service"
 CAPACITY_TEXT_SERVICE = "Report on the visible capacity of this service"
 CONFIG_TEXT_SERVICE = "Show the config info of this service"
 REFRESH_TEXT_SERVICE = "Refresh the tracking info of this service"
@@ -56,7 +56,7 @@ class Action(enum.Enum):
     PUT = "put"
     SEARCH = "search"
     FUZZY = "fuzzy"
-    STATUS = "stat"
+    STATS = "stats"
     CAPACITY = "cap"
     CONFIG = "config"
     REFRESH = "refresh"
@@ -164,7 +164,7 @@ def add_commands(subparsers, service=None):
     p_put = add_parser(Action.PUT.value, description=f"[{service}] -- {PUT_TEXT_SERVICE}" if service else PUT_TEXT)
     p_search = add_parser(Action.SEARCH.value, description=f"[{service}] -- {SEARCH_TEXT_SERVICE}" if service else SEARCH_TEXT)
     p_fuzzy = add_parser(Action.FUZZY.value, description=f"[{service}] -- {FUZZY_TEXT_SERVICE}" if service else FUZZY_TEXT)
-    add_parser(Action.STATUS.value, description=f"[{service}] -- {STATUS_TEXT_SERVICE}" if service else STATUS_TEXT)
+    add_parser(Action.STATS.value, description=f"[{service}] -- {STATS_TEXT_SERVICE}" if service else STATS_TEXT)
     add_parser(Action.CAPACITY.value, description=f"[{service}] -- {CAPACITY_TEXT_SERVICE}" if service else CAPACITY_TEXT)
     add_parser(Action.CONFIG.value, description=f"[{service}] -- {CONFIG_TEXT_SERVICE}" if service else CONFIG_TEXT)
     add_parser(Action.REFRESH.value, description=f"[{service}] -- {REFRESH_TEXT_SERVICE}" if service else REFRESH_TEXT)
@@ -327,6 +327,12 @@ def main():
         results = api.run_remove(*args.hashes, service_selector=service_selector)
         for result in results:
             print(repr(result))
+    elif args.action == Action.STATS.value:
+        results = api.run_stats(service_selector=service_selector)
+        if service_selector != "all":
+            results = [results]
+        for result in results:
+            print(repr(results))
     else:
         raise NotImplementedError()
 

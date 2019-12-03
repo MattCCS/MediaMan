@@ -44,6 +44,11 @@ class AbstractClient(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def stats(self) -> models.AbstractResultQuota:
+        """Return the stats of the service."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def capacity(self) -> models.AbstractResultQuota:
         """Return the capacity stats of the service."""
         raise NotImplementedError()

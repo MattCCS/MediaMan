@@ -47,6 +47,10 @@ class SimpleMiddleware(abstract.AbstractMiddleware):
         return self.service.download(root, request)
 
     @init
+    def stats(self):
+        return self.service.stats()
+
+    @init
     def capacity(self):
         return self.service.capacity()
 

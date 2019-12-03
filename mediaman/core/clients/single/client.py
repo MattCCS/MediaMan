@@ -36,6 +36,10 @@ class SingleClient(abstract.AbstractSingleClient):
     def download(self, root, file_id):
         return self.index.download(root, file_id)
 
+    def stats(self):
+        files = self.list_files()
+        return {"file_count": len(files)}
+
     def capacity(self):
         return self.index.capacity()
 

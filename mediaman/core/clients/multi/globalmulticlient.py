@@ -156,6 +156,18 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
         logger.error(f"MediaMan doesn't have '{identifier}'.")
         return None
 
+    def stats(self):
+        results = gen_all(methods.stats(self.clients))
+        grand_file_count = 0
+        is_partial = False
+        for result in results:
+            if result.response:
+                response = result.response
+                grand_file_count += response["file_count"]
+            else:
+                is_partial = True
+        return MultiResultQuota(grand_file_count, is_partial)
+
     def capacity(self):
         results = gen_all(methods.capacity(self.clients))
         grand_used = grand_allowed = grand_total = 0

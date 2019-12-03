@@ -36,6 +36,9 @@ class Multiclient(abstract.AbstractMulticlient):
     def download(self, root, file_path):
         raise RuntimeError()  # `mm all get` isn't allowed
 
+    def stats(self):
+        return gen_all(methods.stats(self.clients))
+
     def capacity(self):
         return gen_all(methods.capacity(self.clients))
 

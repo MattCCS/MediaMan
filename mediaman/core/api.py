@@ -16,6 +16,7 @@ __all__ = [
     "run_search",
     "run_fuzzy",
     "run_cap",
+    "run_stat",
     "run_config",
     "get_service_names",
     "get_service_description",
@@ -48,6 +49,10 @@ def run_fuzzy(*file_names, service_selector=None):
 
 def run_cap(service_selector=None):
     return policy.load_client(service_selector=service_selector).capacity()
+
+
+def run_stats(service_selector=None):
+    return policy.load_client(service_selector=service_selector).stats()
 
 
 def run_config(service_selector=None):

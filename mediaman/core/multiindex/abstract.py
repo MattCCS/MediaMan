@@ -33,6 +33,9 @@ class AbstractMultiIndex(abc.ABC):
     def download(self, *requests) -> List[models.AbstractReceiptFile]:
         raise NotImplementedError()
 
+    def stats(self) -> models.AbstractResultQuota:
+        return self.client.stats()
+
     def capacity(self) -> models.AbstractResultQuota:
         return self.client.capacity()
 
