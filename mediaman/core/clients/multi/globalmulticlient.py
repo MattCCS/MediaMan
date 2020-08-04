@@ -290,3 +290,13 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
 
     def remove(self, request):
         raise NotImplementedError()  # `mm remove` is not allowed
+
+    def search_by_hash(self, hash):
+        results = gen_all(methods.search_by_hash(self.clients, hash))
+        deduped_results = set()  # (name, hash)
+        for result in results:
+            for each in result.response:
+                keys = set((each["name"], hash) for hash in each["hashes"])
+                if not keys & deduped_results:
+                    yield each
+                deduped_results.update(keys)

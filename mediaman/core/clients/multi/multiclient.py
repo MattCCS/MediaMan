@@ -50,3 +50,6 @@ class Multiclient(abstract.AbstractMulticlient):
 
     def refresh_global_hashes(self, request):
         raise NotImplementedError()
+
+    def search_by_hash(self, hash):
+        return gen_all(methods.search_by_hash(self.clients, hash))

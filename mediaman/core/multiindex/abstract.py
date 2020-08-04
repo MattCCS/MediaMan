@@ -48,3 +48,7 @@ class AbstractMultiIndex(abc.ABC):
     @abc.abstractmethod
     def remove(self, *requests):
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def search_by_hash(self, *identifiers):
+        raise NotImplementedError()

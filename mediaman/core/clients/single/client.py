@@ -30,6 +30,9 @@ class SingleClient(abstract.AbstractSingleClient):
     def fuzzy_search_by_name(self, file_name):
         return list(self.index.fuzzy_search_by_name(file_name))
 
+    def search_by_hash(self, hash):
+        return list(self.index.search_by_hash(hash))
+
     def upload(self, request):
         return self.index.upload(request)
 

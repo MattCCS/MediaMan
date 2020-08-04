@@ -50,3 +50,12 @@ class BaseMultiIndex(abstract.AbstractMultiIndex):
             models.Request(id=None, path=None, hash=identifier)
             for identifier in identifiers)
         yield from map(self.client.remove, requests)
+
+    def search_by_hash(self, *identifiers) -> List[abstractmodels.AbstractResultFile]:
+        for identifier in identifiers:
+            # TODO: this should allow any valid hash, or ID
+            if not validation.is_valid_hash(identifier):
+                logger.error(f"May only pass hashes to `search-by-hash` method, got '{identifier}'.")
+                return
+
+        yield from zip(identifiers, map(self.client.search_by_hash, identifiers))
