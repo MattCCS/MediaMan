@@ -25,6 +25,8 @@ SYNC_TEXT = "Synchronizes all services (if possible)"
 LIST_TEXT = "List all files indexed by MediaMan"
 HAS_TEXT = "Check whether MediaMan has the given file(s)"
 GET_TEXT = "Retrieve the given file(s) from MediaMan"
+STREAM_TEXT = "Stream the given file from MediaMan"
+STREAMRANGE_TEXT = "Stream the given file from MediaMan, from offset up to length"
 PUT_TEXT = "Save the given file(s) to MediaMan"
 SEARCH_TEXT = "Search MediaMan for the given filename(s)"
 FUZZY_TEXT = "Search MediaMan for similar filename(s)"
@@ -36,6 +38,8 @@ REFRESH_TEXT = "Refresh the tracking info of MediaMan"
 LIST_TEXT_SERVICE = "List all files indexed by this service"
 HAS_TEXT_SERVICE = "Check whether this service has the given file(s)"
 GET_TEXT_SERVICE = "Retrieve the given file(s) from this service"
+STREAM_TEXT_SERVICE = "Stream the given file from this service"
+STREAMRANGE_TEXT_SERVICE = "Stream the given file from this service, from offset up to length"
 PUT_TEXT_SERVICE = "Save the given file(s) to this service"
 SEARCH_TEXT_SERVICE = "Search this service for the given filename(s)"
 FUZZY_TEXT_SERVICE = "Search this service for similar filename(s)"
@@ -53,6 +57,8 @@ class Action(enum.Enum):
     LIST = "list"
     HAS = "has"
     GET = "get"
+    STREAM = "stream"
+    STREAMRANGE = "streamrange"
     PUT = "put"
     SEARCH = "search"
     FUZZY = "fuzzy"
@@ -161,6 +167,8 @@ def add_commands(subparsers, service=None):
     add_parser(Action.LIST.value, description=f"[{service}] -- {LIST_TEXT_SERVICE}" if service else LIST_TEXT)
     p_has = add_parser(Action.HAS.value, description=f"[{service}] -- {HAS_TEXT_SERVICE}" if service else HAS_TEXT)
     p_get = add_parser(Action.GET.value, description=f"[{service}] -- {GET_TEXT_SERVICE}" if service else GET_TEXT)
+    p_stream = add_parser(Action.STREAM.value, description=f"[{service}] -- {STREAM_TEXT_SERVICE}" if service else STREAM_TEXT)
+    p_streamrange = add_parser(Action.STREAMRANGE.value, description=f"[{service}] -- {STREAMRANGE_TEXT_SERVICE}" if service else STREAMRANGE_TEXT)
     p_put = add_parser(Action.PUT.value, description=f"[{service}] -- {PUT_TEXT_SERVICE}" if service else PUT_TEXT)
     p_search = add_parser(Action.SEARCH.value, description=f"[{service}] -- {SEARCH_TEXT_SERVICE}" if service else SEARCH_TEXT)
     p_fuzzy = add_parser(Action.FUZZY.value, description=f"[{service}] -- {FUZZY_TEXT_SERVICE}" if service else FUZZY_TEXT)
@@ -168,6 +176,13 @@ def add_commands(subparsers, service=None):
     add_parser(Action.CAPACITY.value, description=f"[{service}] -- {CAPACITY_TEXT_SERVICE}" if service else CAPACITY_TEXT)
     add_parser(Action.CONFIG.value, description=f"[{service}] -- {CONFIG_TEXT_SERVICE}" if service else CONFIG_TEXT)
     add_parser(Action.REFRESH.value, description=f"[{service}] -- {REFRESH_TEXT_SERVICE}" if service else REFRESH_TEXT)
+
+    for parser in [p_stream, p_streamrange]:
+        parser.add_argument("file")
+
+    for parser in [p_streamrange]:
+        parser.add_argument("offset", type=int, nargs="?", default=0)
+        parser.add_argument("length", type=int, nargs="?", default=-1)
 
     for parser in [p_has, p_get, p_put, p_search, p_fuzzy]:
         parser.add_argument("files", nargs="+")
@@ -301,6 +316,16 @@ def main():
         results = api.run_get(root, *args.files, service_selector=service_selector)
         for result in results:
             print(repr(result))
+    elif args.action == "stream":
+        stream = api.run_stream(root, args.file, service_selector=service_selector)
+        for bytez in stream:
+            sys.stdout.buffer.write(bytez)
+            sys.stdout.buffer.flush()
+    elif args.action == "streamrange":
+        stream = api.run_stream_range(root, args.file, args.offset, args.length, service_selector=service_selector)
+        for bytez in stream:
+            sys.stdout.buffer.write(bytez)
+            sys.stdout.buffer.flush()
     elif args.action == "put":
         all_results = api.run_put(root, *args.files, service_selector=service_selector)
         if all_mode:

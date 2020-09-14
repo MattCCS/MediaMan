@@ -1,4 +1,5 @@
 import abc
+from typing import Generator
 
 from mediaman.services.abstract import models
 
@@ -41,6 +42,16 @@ class AbstractClient(abc.ABC):
     @abc.abstractmethod
     def download(self, root, request) -> models.AbstractReceiptFile:
         """Download the file(s) described by the given request."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def stream(self, root, request) -> Generator[bytes, None, None]:
+        """Stream the file described by the given request."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def stream_range(self, root, request, offset, length) -> Generator[bytes, None, None]:
+        """Stream the file described by the given request, within range."""
         raise NotImplementedError()
 
     @abc.abstractmethod

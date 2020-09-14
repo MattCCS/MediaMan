@@ -156,6 +156,42 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
         logger.error(f"MediaMan doesn't have '{identifier}'.")
         return None
 
+    def stream(self, root, identifier):
+        # TODO: make some sort of identifier Enum
+        # (hash, uuid, name, row #, ...)
+        if validation.is_valid_hash(identifier):
+            func = methods.has_hash
+        elif validation.is_valid_uuid(identifier):
+            func = methods.has_uuid
+        else:
+            # BUG: when checking by name, need to see if duplicates exist!
+            func = methods.has_name
+
+        for (client, result) in zip(self.clients, gen_all(func(self.clients, identifier))):
+            if result.response:
+                return client.stream(root, identifier)
+
+        logger.error(f"MediaMan doesn't have '{identifier}'.")
+        return None
+
+    def stream_range(self, root, identifier, offset, length):
+        # TODO: make some sort of identifier Enum
+        # (hash, uuid, name, row #, ...)
+        if validation.is_valid_hash(identifier):
+            func = methods.has_hash
+        elif validation.is_valid_uuid(identifier):
+            func = methods.has_uuid
+        else:
+            # BUG: when checking by name, need to see if duplicates exist!
+            func = methods.has_name
+
+        for (client, result) in zip(self.clients, gen_all(func(self.clients, identifier))):
+            if result.response:
+                return client.stream_range(root, identifier, offset, length)
+
+        logger.error(f"MediaMan doesn't have '{identifier}'.")
+        return None
+
     def stats(self):
         results = gen_all(methods.stats(self.clients))
         grand_file_count = 0
@@ -289,4 +325,4 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
         return list(gen_all(methods.refresh_global_hashes(self.clients, hashes_by_hash)))
 
     def remove(self, request):
-        raise NotImplementedError()  # `mm remove` is not allowed
+        raise NotImplementedError()  # `mm remove` isn't allowed

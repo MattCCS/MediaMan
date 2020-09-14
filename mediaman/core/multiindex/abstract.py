@@ -1,6 +1,6 @@
 
 import abc
-from typing import List
+from typing import List, Generator
 
 from mediaman.services.abstract import models
 
@@ -31,6 +31,14 @@ class AbstractMultiIndex(abc.ABC):
 
     @abc.abstractmethod
     def download(self, *requests) -> List[models.AbstractReceiptFile]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def stream(self, *requests) -> Generator[bytes, None, None]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def stream_range(self, request, offset, length) -> Generator[bytes, None, None]:
         raise NotImplementedError()
 
     def stats(self) -> models.AbstractResultQuota:

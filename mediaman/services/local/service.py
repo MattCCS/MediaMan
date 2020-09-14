@@ -45,6 +45,12 @@ class LocalService(service.AbstractService):
             methods.download(self.destination_path, request)
         )
 
+    def stream(self, request):
+        return methods.stream(self.destination_path, request)
+
+    def stream_range(self, request, offset, length):
+        return methods.stream_range(self.destination_path, request, offset, length)
+
     def capacity(self):
         return models.LocalResultQuota(
             methods.capacity(self.destination_path, self._config.quota)

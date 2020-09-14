@@ -301,6 +301,56 @@ class Index(base.BaseIndex):
         )
         return self.service.download(request)
 
+    @init
+    def stream(self, root, identifier):
+        logger.debug(f"Stream request for: '{identifier}' to '{root}'...")
+
+        if self.has_uuid(identifier):
+            metadata = self.get_metadata_by_uuid(identifier)
+        elif self.has_hash(identifier):
+            metadata = self.get_metadata_by_hash(identifier)
+        else:
+            metadatas = self.search_by_name(identifier)
+            if not metadatas:
+                logger.error("[-] No such file found!")
+                return None
+            elif len(metadatas) > 1:
+                logger.error("[-] Multiple files exist with that name!  Pass the hash or ID instead.")
+                return False
+            else:
+                metadata = metadatas[0]
+
+        request = models.Request(
+            id=metadata["sid"],
+            path=root / metadata["name"],
+        )
+        return self.service.stream(request)
+
+    @init
+    def stream_range(self, root, identifier, offset, length):
+        logger.debug(f"Stream request for: '{identifier}' to '{root}'...")
+
+        if self.has_uuid(identifier):
+            metadata = self.get_metadata_by_uuid(identifier)
+        elif self.has_hash(identifier):
+            metadata = self.get_metadata_by_hash(identifier)
+        else:
+            metadatas = self.search_by_name(identifier)
+            if not metadatas:
+                logger.error("[-] No such file found!")
+                return None
+            elif len(metadatas) > 1:
+                logger.error("[-] Multiple files exist with that name!  Pass the hash or ID instead.")
+                return False
+            else:
+                metadata = metadatas[0]
+
+        request = models.Request(
+            id=metadata["sid"],
+            path=root / metadata["name"],
+        )
+        return self.service.stream_range(request, offset, length)
+
     def refresh(self):
         raw_metadata = self.load_metadata_json(self.service.search_by_name(Index.INDEX_FILENAME).results()[0])
         metadata = migration.repair_metadata(raw_metadata)

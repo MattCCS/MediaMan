@@ -36,6 +36,12 @@ class SingleClient(abstract.AbstractSingleClient):
     def download(self, root, file_id):
         return self.index.download(root, file_id)
 
+    def stream(self, root, file_id):
+        return self.index.stream(root, file_id)
+
+    def stream_range(self, root, file_id, offset, length):
+        return self.index.stream_range(root, file_id, offset, length)
+
     def stats(self):
         files = self.list_files()
         return {"file_count": len(files)}

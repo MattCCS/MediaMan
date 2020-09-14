@@ -40,6 +40,9 @@ ERROR_MULTIPLE_REMOTE_FILES = "\
 This must be resolved manually.  Exiting..."
 
 
+TEST_SESH = {}  # name: salt
+
+
 def form_path_prepend():
     global OPENSSL_PREFERRED_BINS
     return ":".join(OPENSSL_PREFERRED_BINS + [config.load_safe("PATH")])
@@ -81,6 +84,67 @@ def decrypt(source, destination, keypath, cipher, digest):
     logger.info(f"Decrypting file...")
     try:
         subprocess.check_output(args, stderr=subprocess.PIPE, env=form_subprocess_environ())
+    except subprocess.CalledProcessError as exc:
+        err_text = exc.stderr.decode("utf-8")
+
+        logger.debug(exc)
+        if err_text.startswith("bad decrypt"):
+            logger.fatal(f"Decryption failed -- encryption key is incorrect.")
+        else:
+            logger.fatal(f"Decryption failed -- generic error: {err_text}")
+
+        raise
+
+
+def decrypt_stream(source, keypath, cipher, digest):
+    import threading
+
+    def pump_input(pipe, source):
+        # https://stackoverflow.com/questions/32322034/writing-large-amount-of-data-to-stdin
+        with pipe:
+            for bytez in source:
+                pipe.write(bytez)
+                pipe.flush()
+
+    def deal_with_stdout(process, sink):
+        for bytez in process.stdout:
+            sink.write(bytez)
+            sink.flush()
+
+    args = [
+        "openssl", "enc", "-d",
+        "-kfile", keypath, f"-{cipher}", "-md", digest,
+        "-bufsize", "1048576",
+    ]
+    logger.info(f"decrypting: {args}")
+
+    logger.info(f"Decrypting stream...")
+    try:
+        process = subprocess.Popen(
+            args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, env=form_subprocess_environ())
+
+        # threading.Thread(target=deal_with_stdout, args=[process, sink]).start()
+        # for bytez in source:
+        #     process.stdin.write(bytez)
+        #     process.stdin.flush()
+
+        threading.Thread(target=pump_input, args=[process.stdin, source]).start()
+        # import sys
+        # sink = sys.stdout.buffer
+        # for bytez in process.stdout:
+        #    # sink.write(bytez)
+        #    # sink.flush()
+        while True:
+            bytez = process.stdout.read()
+            # logger.debug(bytez)
+            if not bytez:
+                return
+            yield bytez
+        # for bytez in process.stdout:
+        #     logger.debug(bytez)
+        #     yield bytez
+        # yield from process.stdout
     except subprocess.CalledProcessError as exc:
         err_text = exc.stderr.decode("utf-8")
 
@@ -219,3 +283,127 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
             decrypt(tempfile_ref.name, request.path, keypath, cipher, digest)
 
         return receipt
+
+    def stream(self, request):
+        if request.id not in self.metadata["data"]:
+            logger.info(f"Streaming unencrypted file: {request}")
+            return self.service.stream(request)
+
+        # global TEST_SESH
+        # if request.id not in TEST_SESH:
+        #     TEST_SESH[request.id] = {"ebuff": None, "pbuff": None}
+
+        params = self.metadata["data"][request.id]
+
+        keypath = KEYPATH
+        cipher = params["cipher"]
+        digest = params["digest"]
+
+        logger.info(f"Streaming encrypted file: {request}")
+        temp_request = models.Request(
+            id=request.id,
+        )
+
+        stream = self.service.stream(temp_request)
+
+        return decrypt_stream(stream, keypath, cipher, digest)
+
+    def stream_range(self, request, offset, length):
+        if request.id not in self.metadata["data"]:
+            logger.info(f"Streaming unencrypted file: {request}")
+            return self.service.stream_range(request, offset, length)
+
+        logger.info(f"Streaming encrypted file: {request}")
+        temp_request = models.Request(
+            id=request.id,
+        )
+
+        if offset < 16:
+            # raise RuntimeError("Not supported!")
+            return self.stream_range_continuous(temp_request, offset, length)
+        return self.stream_range_discontinuous(temp_request, offset, length)
+
+    def stream_range_continuous(self, request, offset, length):
+        params = self.metadata["data"][request.id]
+
+        keypath = KEYPATH
+        cipher = params["cipher"]
+        digest = params["digest"]
+
+        import math
+        BLOCK_SIZE = 16
+
+        blocks_needed = int(math.ceil((offset + length) / BLOCK_SIZE))
+
+        skip = 0
+        count = (blocks_needed + 2) * BLOCK_SIZE
+
+        stream = self.service.stream_range(request, skip, count)
+        out_stream = decrypt_stream(stream, keypath, cipher, digest)
+
+        remaining = length
+        first = True
+        for bytez in out_stream:
+            # print(f"\tremaining={remaining}")
+            if first:
+                # print(f"\ttrimming {bytez}")
+                bytez = bytez[(offset % 16):]
+                # print(f"\tto {bytez}")
+                first = False
+
+            if len(bytez) >= remaining:
+                yield bytez[:remaining]
+                remaining -= remaining
+                break
+
+            yield bytez
+            remaining -= len(bytez)
+
+    def stream_range_discontinuous(self, request, offset, length):
+        params = self.metadata["data"][request.id]
+
+        keypath = KEYPATH
+        cipher = params["cipher"]
+        digest = params["digest"]
+
+        import itertools
+        import math
+        logger.debug(f"Getting CBC salt...")
+        BLOCK_SIZE = 16
+
+        start_block = offset // BLOCK_SIZE
+        blocks_needed = int(math.ceil((offset + length) / BLOCK_SIZE) - start_block)
+
+        global TEST_SESH
+        try:
+            salt = TEST_SESH[request.id]
+        except KeyError:
+            salt = [next(self.service.stream_range(request, 0, 16))]
+            TEST_SESH[request.id] = salt
+
+        skip = (start_block) * BLOCK_SIZE
+        count = (blocks_needed + 2) * BLOCK_SIZE
+
+        data = self.service.stream_range(request, skip, count)
+
+        stream = itertools.chain(salt, data)
+        out_stream = decrypt_stream(stream, keypath, cipher, digest)
+
+        remaining = length
+        first = True
+        for bytez in out_stream:
+            # print(f"\tremaining={remaining}")
+            if first:
+                # print(f"\ttrimming {bytez}")
+                bytez = bytez[(offset % 16) + 16:]
+                # print(f"\tto {bytez}")
+                first = False
+
+            if len(bytez) >= remaining:
+                # print(f"\tend")
+                yield bytez[:remaining]
+                remaining -= remaining
+                break
+
+            yield bytez
+            remaining -= len(bytez)

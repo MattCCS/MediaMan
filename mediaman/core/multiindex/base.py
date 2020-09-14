@@ -1,6 +1,6 @@
 
 from functools import partial
-from typing import List
+from typing import List, Generator
 
 from mediaman.core import hashing
 from mediaman.core import logtools
@@ -38,6 +38,12 @@ class BaseMultiIndex(abstract.AbstractMultiIndex):
     def download(self, root, *identifiers) -> List[abstractmodels.AbstractReceiptFile]:
         local_download = partial(self.client.download, root)
         yield from map(local_download, identifiers)
+
+    def stream(self, root, identifier) -> Generator[bytes, None, None]:
+        return self.client.stream(root, identifier)
+
+    def stream_range(self, root, identifier, offset, length) -> Generator[bytes, None, None]:
+        return self.client.stream_range(root, identifier, offset, length)
 
     def remove(self, *identifiers) -> List[abstractmodels.AbstractReceiptFile]:
         for identifier in identifiers:

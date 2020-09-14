@@ -36,6 +36,12 @@ class Multiclient(abstract.AbstractMulticlient):
     def download(self, root, file_path):
         raise RuntimeError()  # `mm all get` isn't allowed
 
+    def stream(self, root, file_path):
+        raise RuntimeError()  # `mm all stream` isn't allowed
+
+    def stream_range(self, root, file_path, offset, length):
+        raise RuntimeError()  # `mm all streamrange` isn't allowed
+
     def stats(self):
         return gen_all(methods.stats(self.clients))
 
