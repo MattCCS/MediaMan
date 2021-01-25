@@ -185,6 +185,10 @@ class Index(base.BaseIndex):
         return [f for f in self.files().values() if file_name.lower() in f["name"].lower()]
 
     @init
+    def search_by_hash(self, hash):
+        return [f for f in self.files().values() if hash in f["hashes"] or hash in f["merged_hashes"]]
+
+    @init
     def has_hash(self, hash):
         return hash in self.hash_to_metadata_map or hash in self.merged_hash_to_metadata_map
 

@@ -244,9 +244,7 @@ def stream_range(drive, request, folder_id=None, offset=0, length=0):
     http_request = drive.files().get_media(fileId=request.id)
     media_request = apiclient.http.MediaIoBaseDownload(memory_fd, http_request, start=offset, chunksize=max(65536, length))
 
-    with open("mmlog.txt", "a") as outfile:
-        outfile.write(f"\nRequested: offset={offset}, length={length}\n")
-        outfile.flush()
+    logger.trace("Requested: offset={offset}, length={length}\n")
 
     while True:
         try:
@@ -265,21 +263,17 @@ def stream_range(drive, request, folder_id=None, offset=0, length=0):
             abs_read = (download_progress.resumable_progress - 1)
             rel_read = (abs_read - offset)
             if rel_read < remaining:
-                with open("mmlog.txt", "a") as outfile:
-                    outfile.write(f"abs_read={abs_read}\n")
-                    outfile.write(f"rel_read={rel_read}\n")
-                    outfile.write(f"remaining={remaining}\n")
-                    outfile.write(f"Streamed {rel_read / 1_000_000} MB...\n")
-                    outfile.flush()
+                logger.trace(f"abs_read={abs_read}\n")
+                logger.trace(f"rel_read={rel_read}\n")
+                logger.trace(f"remaining={remaining}\n")
+                logger.trace(f"Streamed {rel_read / 1_000_000} MB...\n")
                 yield data
                 remaining -= len(data)
             else:
-                with open("mmlog.txt", "a") as outfile:
-                    outfile.write(f"abs_read={abs_read}\n")
-                    outfile.write(f"rel_read={rel_read}\n")
-                    outfile.write(f"remaining={remaining}\n")
-                    outfile.write(f"Finished: {rel_read / 1_000_000} MB...\n")
-                    outfile.flush()
+                logger.trace(f"abs_read={abs_read}\n")
+                logger.trace(f"rel_read={rel_read}\n")
+                logger.trace(f"remaining={remaining}\n")
+                logger.trace(f"Finished: {rel_read / 1_000_000} MB...\n")
                 yield data[:remaining]
                 return
 

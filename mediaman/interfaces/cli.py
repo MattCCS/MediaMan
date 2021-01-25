@@ -34,6 +34,7 @@ STATS_TEXT = "Show the stats for Mediaman"
 CAPACITY_TEXT = "Report on the visible capacity of MediaMan"
 CONFIG_TEXT = "Show the config info of MediaMan"
 REFRESH_TEXT = "Refresh the tracking info of MediaMan"
+SEARCH_BY_HASH_TEXT = "Search MediaMan for the given hash(es)"
 
 LIST_TEXT_SERVICE = "List all files indexed by this service"
 HAS_TEXT_SERVICE = "Check whether this service has the given file(s)"
@@ -48,6 +49,7 @@ CAPACITY_TEXT_SERVICE = "Report on the visible capacity of this service"
 CONFIG_TEXT_SERVICE = "Show the config info of this service"
 REFRESH_TEXT_SERVICE = "Refresh the tracking info of this service"
 REMOVE_TEXT_SERVICE = "Remove the given file(s) from this service (by hash only)"
+SEARCH_BY_HASH_TEXT_SERVICE = "Search this service for the given hash(es)"
 
 
 class Action(enum.Enum):
@@ -67,6 +69,7 @@ class Action(enum.Enum):
     CONFIG = "config"
     REFRESH = "refresh"
     REMOVE = "remove"
+    SEARCH_BY_HASH = "search-by-hash"
 
 
 ACTIONS = frozenset(action.value for action in Action)
@@ -176,6 +179,7 @@ def add_commands(subparsers, service=None):
     add_parser(Action.CAPACITY.value, description=f"[{service}] -- {CAPACITY_TEXT_SERVICE}" if service else CAPACITY_TEXT)
     add_parser(Action.CONFIG.value, description=f"[{service}] -- {CONFIG_TEXT_SERVICE}" if service else CONFIG_TEXT)
     add_parser(Action.REFRESH.value, description=f"[{service}] -- {REFRESH_TEXT_SERVICE}" if service else REFRESH_TEXT)
+    p_search_by_hash = add_parser(Action.SEARCH_BY_HASH.value, description=f"[{service}] -- {SEARCH_BY_HASH_TEXT_SERVICE}" if service else SEARCH_BY_HASH_TEXT)
 
     for parser in [p_stream, p_streamrange]:
         parser.add_argument("file")
@@ -186,6 +190,9 @@ def add_commands(subparsers, service=None):
 
     for parser in [p_has, p_get, p_put, p_search, p_fuzzy]:
         parser.add_argument("files", nargs="+")
+
+    for parser in [p_search_by_hash]:
+        parser.add_argument("hashes", nargs="+")
 
 
 def run_services():
@@ -249,7 +256,7 @@ def main():
     all_mode = service_selector == "all"
 
     file_results_list_funcs = {
-        "list", "search", "fuzzy"
+        "list", "search", "fuzzy", "search-by-hash"
     }
 
     if args.action in file_results_list_funcs:
@@ -259,6 +266,8 @@ def main():
             results = api.run_search(*args.files, service_selector=service_selector)
         elif args.action == "fuzzy":
             results = api.run_fuzzy(*args.files, service_selector=service_selector)
+        elif args.action == Action.SEARCH_BY_HASH.value:
+            results = api.run_search_by_hash(*args.hashes, service_selector=service_selector)
         else:
             raise NotImplementedError()
 

@@ -86,3 +86,7 @@ def run_refresh(service_selector=None):
 
 def run_remove(*identifiers, service_selector=None):
     return policy.load_client(service_selector=service_selector).remove(*identifiers)
+
+
+def run_search_by_hash(*identifiers, service_selector=None):
+    return policy.load_client(service_selector=service_selector).search_by_hash(*identifiers)

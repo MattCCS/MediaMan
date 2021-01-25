@@ -104,6 +104,10 @@ def fuzzy_search_by_name(clients, file_name) -> Iterable[models.Response]:
     return apply_consecutive(clients, "fuzzy_search_by_name", file_name)
 
 
+def search_by_hash(clients, hash) -> Iterable[models.Response]:
+    return apply_consecutive(clients, "search_by_hash", hash)
+
+
 def upload(clients, file_path) -> Iterable[models.Response]:
     return apply_consecutive(clients, "upload", file_path)
 
