@@ -53,7 +53,10 @@ def create_file(id, name, sid, size, hashes, merged_hashes):
     }
 
 
-def create_metadata(files):
+def create_metadata(files=None):
+    if files is None:
+        files = {}
+
     return {
         "version": settings.VERSION,
         "files": files,
@@ -88,12 +91,18 @@ class Index(base.BaseIndex):
         file_list = self.service.search_by_name(Index.INDEX_FILENAME)
         files = file_list.results()
 
+        logger.debug(f"files = {files}")
+        logger.debug(f"file_list = {file_list}")
         if len(files) > 1:
             raise RuntimeError(ERROR_MULTIPLE_REMOTE_INDICES.format(self.service))
 
+        # new index file
         if not files:
+            logger.debug(f"creating metadata")
+            self.metadata = create_metadata()
             self.update_metadata()
         else:
+            logger.debug(f"loading metadata")
             self.load_metadata(files[0])
 
     def update_metadata(self):
@@ -174,6 +183,10 @@ class Index(base.BaseIndex):
     @init
     def fuzzy_search_by_name(self, file_name):
         return [f for f in self.files().values() if file_name.lower() in f["name"].lower()]
+
+    @init
+    def search_by_hash(self, hash):
+        return [f for f in self.files().values() if hash in f["hashes"] or hash in f["merged_hashes"]]
 
     @init
     def has_hash(self, hash):
@@ -296,6 +309,56 @@ class Index(base.BaseIndex):
         )
         return self.service.download(request)
 
+    @init
+    def stream(self, root, identifier):
+        logger.debug(f"Stream request for: '{identifier}' to '{root}'...")
+
+        if self.has_uuid(identifier):
+            metadata = self.get_metadata_by_uuid(identifier)
+        elif self.has_hash(identifier):
+            metadata = self.get_metadata_by_hash(identifier)
+        else:
+            metadatas = self.search_by_name(identifier)
+            if not metadatas:
+                logger.error("[-] No such file found!")
+                return None
+            elif len(metadatas) > 1:
+                logger.error("[-] Multiple files exist with that name!  Pass the hash or ID instead.")
+                return False
+            else:
+                metadata = metadatas[0]
+
+        request = models.Request(
+            id=metadata["sid"],
+            path=root / metadata["name"],
+        )
+        return self.service.stream(request)
+
+    @init
+    def stream_range(self, root, identifier, offset, length):
+        logger.debug(f"Stream request for: '{identifier}' to '{root}'...")
+
+        if self.has_uuid(identifier):
+            metadata = self.get_metadata_by_uuid(identifier)
+        elif self.has_hash(identifier):
+            metadata = self.get_metadata_by_hash(identifier)
+        else:
+            metadatas = self.search_by_name(identifier)
+            if not metadatas:
+                logger.error("[-] No such file found!")
+                return None
+            elif len(metadatas) > 1:
+                logger.error("[-] Multiple files exist with that name!  Pass the hash or ID instead.")
+                return False
+            else:
+                metadata = metadatas[0]
+
+        request = models.Request(
+            id=metadata["sid"],
+            path=root / metadata["name"],
+        )
+        return self.service.stream_range(request, offset, length)
+
     def refresh(self):
         raw_metadata = self.load_metadata_json(self.service.search_by_name(Index.INDEX_FILENAME).results()[0])
         metadata = migration.repair_metadata(raw_metadata)
@@ -358,7 +421,7 @@ class Index(base.BaseIndex):
             logger.debug(new_file)
 
         new_metadata_files = {str(i): v for (i, v) in dict(enumerate(new_files)).items()}
-        new_metadata = create_metadata(new_metadata_files)
+        new_metadata = create_metadata(files=new_metadata_files)
         logger.info(f"New metadata: {new_metadata}")
 
         inp = input("Does everything look good? [Y/n] ")

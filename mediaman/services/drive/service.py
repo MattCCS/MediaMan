@@ -67,6 +67,16 @@ class DriveService(service.AbstractService):
         )
 
     @service.auth
+    def stream(self, request):
+        return methods.stream(self._drive, request, folder_id=self._folder_id)
+
+    @service.auth
+    def stream_range(self, request, offset, length):
+        return methods.stream_range(
+            self._drive, request, folder_id=self._folder_id, offset=offset, length=length
+        )
+
+    @service.auth
     def capacity(self):
         return models.DriveResultQuota(
             methods.capacity(self._drive, self._config.quota)

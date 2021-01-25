@@ -52,14 +52,20 @@ def xxh64(path, buffer=1024**2):
     Performance on a Macbook Pro is about 4.20 GB/s.
     """
     import xxhash
+    import sys
 
     xxh64 = xxhash.xxh64(seed=0)
+    read = 0
 
     with open(path, "rb") as infile:
         data = infile.read(buffer)
+        read += buffer
         while data:
+            # sys.stdout.write(f"\rHashed {read / 1024**3:.2f} GiB...")
+            # sys.stdout.flush()
             xxh64.update(data)
             data = infile.read(buffer)
+            read += buffer
 
     return to_xxh64(xxh64.hexdigest())
 

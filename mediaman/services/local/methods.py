@@ -39,10 +39,14 @@ def extractor(path):
 
 
 def list_files(destination_path):
-    return map(
+    logger.debug(f"listing files in {repr(destination_path)}")
+    files = list(map(
         extractor,
         (pathlib.Path(path) for path in glob.glob(f"{str(destination_path)}/*"))
-    )
+    ))
+    logger.trace(f"files = {files}")
+    logger.debug(f"files: {len(files)}")
+    return files
 
 
 def list_file(destination_path, file_id):
@@ -54,7 +58,10 @@ def list_file(destination_path, file_id):
 
 
 def search_by_name(destination_path, file_name):
+    logger.debug(f"searching for {repr(file_name)} in {repr(destination_path)}")
     out = (data for data in list_files(destination_path) if data["name"] == file_name)
+    out = list(out)
+    logger.debug(f"out = {out}")
     return out
 
 
@@ -65,11 +72,14 @@ def exists(destination_path, file_id):
 def upload(destination_path, request):
     # TODO: check for overwriting?
     dest = destination_path / request.id
+    written = 0
     with open(request.path, "rb") as infile:
         with open(dest, "wb") as outfile:
             data = infile.read(WRITE_BUFFER)
             while data:
                 outfile.write(data)
+                written += len(data)
+                logger.info(f"Wrote {written / 1_000_000:.2f} MB...")
                 data = infile.read(WRITE_BUFFER)
     return {
         "id": request.id,
@@ -79,16 +89,45 @@ def upload(destination_path, request):
 def download(destination_path, request):
     # TODO: check for overwriting?
     source_file_path = destination_path / request.id
+    written = 0
     with open(source_file_path, "rb") as infile:
         with open(request.path, "wb") as outfile:
             data = infile.read(WRITE_BUFFER)
             while data:
                 outfile.write(data)
+                written += len(data)
+                logger.info(f"Wrote {written / 1_000_000:.2f} MB...")
                 data = infile.read(WRITE_BUFFER)
     return {
         "id": request.id,
         "path": request.path,
     }
+
+
+def stream(destination_path, request):
+    source_file_path = destination_path / request.id
+    written = 0
+    with open(source_file_path, "rb") as infile:
+        data = infile.read(WRITE_BUFFER)
+        while data:
+            yield data
+            written += len(data)
+            logger.info(f"Wrote {written / 1_000_000:.2f} MB...")
+            data = infile.read(WRITE_BUFFER)
+
+
+def stream_range(destination_path, request, offset, length):
+    source_file_path = destination_path / request.id
+    with open(source_file_path, "rb") as infile:
+        infile.seek(offset)
+        data = infile.read(WRITE_BUFFER)
+        while data:
+            data = data[:length]
+            yield data
+            length -= len(data)
+            if not length:
+                break
+            data = infile.read(WRITE_BUFFER)
 
 
 def capacity(destination_path, quota):

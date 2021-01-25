@@ -25,25 +25,31 @@ SYNC_TEXT = "Synchronizes all services (if possible)"
 LIST_TEXT = "List all files indexed by MediaMan"
 HAS_TEXT = "Check whether MediaMan has the given file(s)"
 GET_TEXT = "Retrieve the given file(s) from MediaMan"
+STREAM_TEXT = "Stream the given file from MediaMan"
+STREAMRANGE_TEXT = "Stream the given file from MediaMan, from offset up to length"
 PUT_TEXT = "Save the given file(s) to MediaMan"
 SEARCH_TEXT = "Search MediaMan for the given filename(s)"
 FUZZY_TEXT = "Search MediaMan for similar filename(s)"
-STATUS_TEXT = "Report on the status/availability of MediaMan"
+STATS_TEXT = "Show the stats for Mediaman"
 CAPACITY_TEXT = "Report on the visible capacity of MediaMan"
 CONFIG_TEXT = "Show the config info of MediaMan"
 REFRESH_TEXT = "Refresh the tracking info of MediaMan"
+SEARCH_BY_HASH_TEXT = "Search MediaMan for the given hash(es)"
 
 LIST_TEXT_SERVICE = "List all files indexed by this service"
 HAS_TEXT_SERVICE = "Check whether this service has the given file(s)"
 GET_TEXT_SERVICE = "Retrieve the given file(s) from this service"
+STREAM_TEXT_SERVICE = "Stream the given file from this service"
+STREAMRANGE_TEXT_SERVICE = "Stream the given file from this service, from offset up to length"
 PUT_TEXT_SERVICE = "Save the given file(s) to this service"
 SEARCH_TEXT_SERVICE = "Search this service for the given filename(s)"
 FUZZY_TEXT_SERVICE = "Search this service for similar filename(s)"
-STATUS_TEXT_SERVICE = "Report on the status/availability of this service"
+STATS_TEXT_SERVICE = "Show the stats for this service"
 CAPACITY_TEXT_SERVICE = "Report on the visible capacity of this service"
 CONFIG_TEXT_SERVICE = "Show the config info of this service"
 REFRESH_TEXT_SERVICE = "Refresh the tracking info of this service"
 REMOVE_TEXT_SERVICE = "Remove the given file(s) from this service (by hash only)"
+SEARCH_BY_HASH_TEXT_SERVICE = "Search this service for the given hash(es)"
 
 
 class Action(enum.Enum):
@@ -53,14 +59,17 @@ class Action(enum.Enum):
     LIST = "list"
     HAS = "has"
     GET = "get"
+    STREAM = "stream"
+    STREAMRANGE = "streamrange"
     PUT = "put"
     SEARCH = "search"
     FUZZY = "fuzzy"
-    STATUS = "stat"
+    STATS = "stats"
     CAPACITY = "cap"
     CONFIG = "config"
     REFRESH = "refresh"
     REMOVE = "remove"
+    SEARCH_BY_HASH = "search-by-hash"
 
 
 ACTIONS = frozenset(action.value for action in Action)
@@ -161,16 +170,29 @@ def add_commands(subparsers, service=None):
     add_parser(Action.LIST.value, description=f"[{service}] -- {LIST_TEXT_SERVICE}" if service else LIST_TEXT)
     p_has = add_parser(Action.HAS.value, description=f"[{service}] -- {HAS_TEXT_SERVICE}" if service else HAS_TEXT)
     p_get = add_parser(Action.GET.value, description=f"[{service}] -- {GET_TEXT_SERVICE}" if service else GET_TEXT)
+    p_stream = add_parser(Action.STREAM.value, description=f"[{service}] -- {STREAM_TEXT_SERVICE}" if service else STREAM_TEXT)
+    p_streamrange = add_parser(Action.STREAMRANGE.value, description=f"[{service}] -- {STREAMRANGE_TEXT_SERVICE}" if service else STREAMRANGE_TEXT)
     p_put = add_parser(Action.PUT.value, description=f"[{service}] -- {PUT_TEXT_SERVICE}" if service else PUT_TEXT)
     p_search = add_parser(Action.SEARCH.value, description=f"[{service}] -- {SEARCH_TEXT_SERVICE}" if service else SEARCH_TEXT)
     p_fuzzy = add_parser(Action.FUZZY.value, description=f"[{service}] -- {FUZZY_TEXT_SERVICE}" if service else FUZZY_TEXT)
-    add_parser(Action.STATUS.value, description=f"[{service}] -- {STATUS_TEXT_SERVICE}" if service else STATUS_TEXT)
+    add_parser(Action.STATS.value, description=f"[{service}] -- {STATS_TEXT_SERVICE}" if service else STATS_TEXT)
     add_parser(Action.CAPACITY.value, description=f"[{service}] -- {CAPACITY_TEXT_SERVICE}" if service else CAPACITY_TEXT)
     add_parser(Action.CONFIG.value, description=f"[{service}] -- {CONFIG_TEXT_SERVICE}" if service else CONFIG_TEXT)
     add_parser(Action.REFRESH.value, description=f"[{service}] -- {REFRESH_TEXT_SERVICE}" if service else REFRESH_TEXT)
+    p_search_by_hash = add_parser(Action.SEARCH_BY_HASH.value, description=f"[{service}] -- {SEARCH_BY_HASH_TEXT_SERVICE}" if service else SEARCH_BY_HASH_TEXT)
+
+    for parser in [p_stream, p_streamrange]:
+        parser.add_argument("file")
+
+    for parser in [p_streamrange]:
+        parser.add_argument("offset", type=int, nargs="?", default=0)
+        parser.add_argument("length", type=int, nargs="?", default=-1)
 
     for parser in [p_has, p_get, p_put, p_search, p_fuzzy]:
         parser.add_argument("files", nargs="+")
+
+    for parser in [p_search_by_hash]:
+        parser.add_argument("hashes", nargs="+")
 
 
 def run_services():
@@ -197,7 +219,7 @@ def human_bytes(n):
 def run_file_list(results, all_mode=False):
     from mediaman.core import watertable
 
-    columns = ((("service", 16),) if all_mode else ()) + (("name", 40 + (0 if all_mode else 19)), ("size", 9), ("hash", 71), ("id", 36))
+    columns = ((("service", 16),) if all_mode else ()) + (("name", 39 + (0 if all_mode else 19)), ("size", 9), ("hash", 22), ("id", 36))
 
     def files_iterator(responses):
         nonlocal all_mode
@@ -234,7 +256,7 @@ def main():
     all_mode = service_selector == "all"
 
     file_results_list_funcs = {
-        "list", "search", "fuzzy"
+        "list", "search", "fuzzy", "search-by-hash"
     }
 
     if args.action in file_results_list_funcs:
@@ -244,6 +266,8 @@ def main():
             results = api.run_search(*args.files, service_selector=service_selector)
         elif args.action == "fuzzy":
             results = api.run_fuzzy(*args.files, service_selector=service_selector)
+        elif args.action == Action.SEARCH_BY_HASH.value:
+            results = api.run_search_by_hash(*args.hashes, service_selector=service_selector)
         else:
             raise NotImplementedError()
 
@@ -261,7 +285,9 @@ def main():
         all_results = api.run_has(root, *args.files, service_selector=service_selector)
 
         service_names = sorted(set(api.get_service_names()) - set(["all"]))
-        max_filename = max(map(len, args.files))
+        max_filename = max([len(str(pathlib.Path(f).absolute())) for f in args.files])
+        print([str(pathlib.Path(f).absolute()) for f in args.files])
+        print(max_filename)
 
         columns = (("name", max(4, max_filename)),)
         if all_mode:
@@ -299,6 +325,16 @@ def main():
         results = api.run_get(root, *args.files, service_selector=service_selector)
         for result in results:
             print(repr(result))
+    elif args.action == "stream":
+        stream = api.run_stream(root, args.file, service_selector=service_selector)
+        for bytez in stream:
+            sys.stdout.buffer.write(bytez)
+            sys.stdout.buffer.flush()
+    elif args.action == "streamrange":
+        stream = api.run_stream_range(root, args.file, args.offset, args.length, service_selector=service_selector)
+        for bytez in stream:
+            sys.stdout.buffer.write(bytez)
+            sys.stdout.buffer.flush()
     elif args.action == "put":
         all_results = api.run_put(root, *args.files, service_selector=service_selector)
         if all_mode:
@@ -325,6 +361,12 @@ def main():
         results = api.run_remove(*args.hashes, service_selector=service_selector)
         for result in results:
             print(repr(result))
+    elif args.action == Action.STATS.value:
+        results = api.run_stats(service_selector=service_selector)
+        if service_selector != "all":
+            results = [results]
+        for result in results:
+            print(repr(results))
     else:
         raise NotImplementedError()
 

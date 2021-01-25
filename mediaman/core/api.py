@@ -12,10 +12,12 @@ __all__ = [
     "run_list",
     "run_has",
     "run_get",
+    "run_stream",
     "run_put",
     "run_search",
     "run_fuzzy",
     "run_cap",
+    "run_stats",
     "run_config",
     "get_service_names",
     "get_service_description",
@@ -34,6 +36,14 @@ def run_get(root, *file_names, service_selector=None):
     return policy.load_client(service_selector=service_selector).download(root, *file_names)
 
 
+def run_stream(root, file_name, service_selector=None):
+    return policy.load_client(service_selector=service_selector).stream(root, file_name)
+
+
+def run_stream_range(root, file_name, offset, length, service_selector=None):
+    return policy.load_client(service_selector=service_selector).stream_range(root, file_name, offset, length)
+
+
 def run_put(root, *file_names, service_selector=None):
     return policy.load_client(service_selector=service_selector).upload(root, *file_names)
 
@@ -48,6 +58,10 @@ def run_fuzzy(*file_names, service_selector=None):
 
 def run_cap(service_selector=None):
     return policy.load_client(service_selector=service_selector).capacity()
+
+
+def run_stats(service_selector=None):
+    return policy.load_client(service_selector=service_selector).stats()
 
 
 def run_config(service_selector=None):
@@ -72,3 +86,7 @@ def run_refresh(service_selector=None):
 
 def run_remove(*identifiers, service_selector=None):
     return policy.load_client(service_selector=service_selector).remove(*identifiers)
+
+
+def run_search_by_hash(*identifiers, service_selector=None):
+    return policy.load_client(service_selector=service_selector).search_by_hash(*identifiers)

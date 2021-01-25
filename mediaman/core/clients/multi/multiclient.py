@@ -36,6 +36,15 @@ class Multiclient(abstract.AbstractMulticlient):
     def download(self, root, file_path):
         raise RuntimeError()  # `mm all get` isn't allowed
 
+    def stream(self, root, file_path):
+        raise RuntimeError()  # `mm all stream` isn't allowed
+
+    def stream_range(self, root, file_path, offset, length):
+        raise RuntimeError()  # `mm all streamrange` isn't allowed
+
+    def stats(self):
+        return gen_all(methods.stats(self.clients))
+
     def capacity(self):
         return gen_all(methods.capacity(self.clients))
 
@@ -47,3 +56,6 @@ class Multiclient(abstract.AbstractMulticlient):
 
     def refresh_global_hashes(self, request):
         raise NotImplementedError()
+
+    def search_by_hash(self, hash):
+        return gen_all(methods.search_by_hash(self.clients, hash))

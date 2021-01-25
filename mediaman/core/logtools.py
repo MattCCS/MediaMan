@@ -16,6 +16,13 @@ __all__ = [
 ]
 
 
+# TODO: surely there's a cleaner way to do add extra log levels...
+for (name, level) in settings.EXTRA_LOG_LEVELS:
+    logging.addLevelName(level, name)
+    setattr(logging.Logger, name.lower(), lambda self, *args, **kwargs: self.log(level, *args, **kwargs))
+
+
+
 def prefixed(name=None):
     if name is None:
         return settings.LOGGER_NAME_PREFIX

@@ -203,6 +203,85 @@ def download(drive, request, folder_id=None):
     }
 
 
+def stream(drive, request, folder_id=None):
+    memory_fd = io.BytesIO()
+
+    import sys
+    http_request = drive.files().get_media(fileId=request.id)
+    # http_request.headers["Range"] = "bytes=500-599"
+    # print(vars(http_request))
+    # return
+    # sys.stderr.write("123")
+    # sys.stderr.flush()
+    media_request = apiclient.http.MediaIoBaseDownload(memory_fd, http_request)
+
+    while True:
+        try:
+            (download_progress, done) = media_request.next_chunk()
+            sys.stderr.write("4")
+            sys.stderr.flush()
+
+            sys.stderr.write(f"Progress={download_progress}, done={done}\n")
+            sys.stderr.flush()
+            memory_fd.seek(0)
+            yield memory_fd.read()
+            memory_fd.seek(0)
+            memory_fd.truncate()
+        except apiclient.errors.HttpError as error:
+            raise
+
+        if download_progress:
+            logger.debug(f"[ ] Downloading... {download_progress.progress():.2%}")
+
+        if done:
+            logger.debug("[+] Download complete.")
+            break
+
+
+def stream_range(drive, request, folder_id=None, offset=0, length=0):
+    memory_fd = io.BytesIO()
+
+    http_request = drive.files().get_media(fileId=request.id)
+    media_request = apiclient.http.MediaIoBaseDownload(memory_fd, http_request, start=offset, chunksize=max(65536, length))
+
+    logger.trace("Requested: offset={offset}, length={length}\n")
+
+    while True:
+        try:
+            (download_progress, done) = media_request.next_chunk()
+
+            memory_fd.seek(0)
+            data = memory_fd.read()
+            memory_fd.seek(0)
+            memory_fd.truncate()
+        except apiclient.errors.HttpError as error:
+            raise
+
+        if download_progress:
+            logger.debug(f"[ ] Downloading... {download_progress.progress():.2%}")
+            remaining = length
+            abs_read = (download_progress.resumable_progress - 1)
+            rel_read = (abs_read - offset)
+            if rel_read < remaining:
+                logger.trace(f"abs_read={abs_read}\n")
+                logger.trace(f"rel_read={rel_read}\n")
+                logger.trace(f"remaining={remaining}\n")
+                logger.trace(f"Streamed {rel_read / 1_000_000} MB...\n")
+                yield data
+                remaining -= len(data)
+            else:
+                logger.trace(f"abs_read={abs_read}\n")
+                logger.trace(f"rel_read={rel_read}\n")
+                logger.trace(f"remaining={remaining}\n")
+                logger.trace(f"Finished: {rel_read / 1_000_000} MB...\n")
+                yield data[:remaining]
+                return
+
+        if done:
+            logger.debug("[+] Download complete.")
+            break
+
+
 def search_by_name(drive, file_name, folder_id=None):
     if folder_id:
         request = drive.files().list(

@@ -82,6 +82,10 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
     def list_files(self):
         deduped_results = set()
         for result in gen_all(methods.list_files(self.clients)):
+            if result.response is None:
+                logger.debug(f"Response is missing, can't parse result: {result}")
+                continue
+
             for each in result.response:
                 hashes = each["hashes"]
                 if not set(hashes) & deduped_results:
@@ -152,6 +156,54 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
         logger.error(f"MediaMan doesn't have '{identifier}'.")
         return None
 
+    def stream(self, root, identifier):
+        # TODO: make some sort of identifier Enum
+        # (hash, uuid, name, row #, ...)
+        if validation.is_valid_hash(identifier):
+            func = methods.has_hash
+        elif validation.is_valid_uuid(identifier):
+            func = methods.has_uuid
+        else:
+            # BUG: when checking by name, need to see if duplicates exist!
+            func = methods.has_name
+
+        for (client, result) in zip(self.clients, gen_all(func(self.clients, identifier))):
+            if result.response:
+                return client.stream(root, identifier)
+
+        logger.error(f"MediaMan doesn't have '{identifier}'.")
+        return None
+
+    def stream_range(self, root, identifier, offset, length):
+        # TODO: make some sort of identifier Enum
+        # (hash, uuid, name, row #, ...)
+        if validation.is_valid_hash(identifier):
+            func = methods.has_hash
+        elif validation.is_valid_uuid(identifier):
+            func = methods.has_uuid
+        else:
+            # BUG: when checking by name, need to see if duplicates exist!
+            func = methods.has_name
+
+        for (client, result) in zip(self.clients, gen_all(func(self.clients, identifier))):
+            if result.response:
+                return client.stream_range(root, identifier, offset, length)
+
+        logger.error(f"MediaMan doesn't have '{identifier}'.")
+        return None
+
+    def stats(self):
+        results = gen_all(methods.stats(self.clients))
+        grand_file_count = 0
+        is_partial = False
+        for result in results:
+            if result.response:
+                response = result.response
+                grand_file_count += response["file_count"]
+            else:
+                is_partial = True
+        return MultiResultQuota(grand_file_count, is_partial)
+
     def capacity(self):
         results = gen_all(methods.capacity(self.clients))
         grand_used = grand_allowed = grand_total = 0
@@ -188,7 +240,9 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
         logger.debug(f"Bins: {bins}")
         logger.debug(f"Total unique items: {len(items)}")
 
-        old_dist = {nickname: set(hash for hash in files) for (nickname, files) in files_by_nickname.items()}
+        old_dist = {nickname: set() for nickname in bins}
+        for (nickname, files) in files_by_nickname.items():
+            old_dist[nickname] = set(hash for hash in files)
         new_dist = distribution.distribute(bins, items, distribution=old_dist)
 
         any_changes = False
@@ -272,3 +326,13 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
 
     def remove(self, request):
         raise NotImplementedError()  # `mm remove` is not allowed
+
+    def search_by_hash(self, hash):
+        results = gen_all(methods.search_by_hash(self.clients, hash))
+        deduped_results = set()  # (name, hash)
+        for result in results:
+            for each in result.response:
+                keys = set((each["name"], hash) for hash in each["hashes"])
+                if not keys & deduped_results:
+                    yield each
+                deduped_results.update(keys)

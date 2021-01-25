@@ -1,22 +1,6 @@
 
-import pathlib
-
 from mediaman.core import validation
 from mediaman.core.clients.single import abstract
-
-
-def resolve_abs_path(root, file_id):
-    path = pathlib.Path(file_id)
-    if path.is_absolute():
-        if path.exists():
-            return path
-        raise FileNotFoundError()
-
-    rel_path = root / path
-    if rel_path.exists():
-        return rel_path
-
-    return None
 
 
 class SingleClient(abstract.AbstractSingleClient):
@@ -46,11 +30,24 @@ class SingleClient(abstract.AbstractSingleClient):
     def fuzzy_search_by_name(self, file_name):
         return list(self.index.fuzzy_search_by_name(file_name))
 
+    def search_by_hash(self, hash):
+        return list(self.index.search_by_hash(hash))
+
     def upload(self, request):
         return self.index.upload(request)
 
     def download(self, root, file_id):
         return self.index.download(root, file_id)
+
+    def stream(self, root, file_id):
+        return self.index.stream(root, file_id)
+
+    def stream_range(self, root, file_id, offset, length):
+        return self.index.stream_range(root, file_id, offset, length)
+
+    def stats(self):
+        files = self.list_files()
+        return {"file_count": len(files)}
 
     def capacity(self):
         return self.index.capacity()

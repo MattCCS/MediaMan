@@ -57,6 +57,8 @@ class Policy:
         self.nickname_to_config[nickname] = config_data
 
     def load_service(self, nickname):
+        if nickname in self.nickname_to_service:
+            return self.nickname_to_service[nickname]
         config = self.nickname_to_config[nickname]
         service_type = config["type"]
         service = services_loader.load(service_type, config)
