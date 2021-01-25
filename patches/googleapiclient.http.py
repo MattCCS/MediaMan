@@ -637,7 +637,7 @@ class MediaIoBaseDownload(object):
     self._request = request
     self._uri = request.uri
     self._chunksize = chunksize
-    self._progress = start
+    self._progress = start  # https://stackoverflow.com/questions/59815890/chunked-partial-download-using-google-drive-python-api
     self._total_size = None
     self._done = False
 

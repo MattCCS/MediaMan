@@ -39,10 +39,14 @@ def extractor(path):
 
 
 def list_files(destination_path):
-    return map(
+    logger.debug(f"listing files in {repr(destination_path)}")
+    files = list(map(
         extractor,
         (pathlib.Path(path) for path in glob.glob(f"{str(destination_path)}/*"))
-    )
+    ))
+    logger.trace(f"files = {files}")
+    logger.debug(f"files: {len(files)}")
+    return files
 
 
 def list_file(destination_path, file_id):
@@ -54,7 +58,10 @@ def list_file(destination_path, file_id):
 
 
 def search_by_name(destination_path, file_name):
+    logger.debug(f"searching for {repr(file_name)} in {repr(destination_path)}")
     out = (data for data in list_files(destination_path) if data["name"] == file_name)
+    out = list(out)
+    logger.debug(f"out = {out}")
     return out
 
 

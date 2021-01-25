@@ -31,6 +31,7 @@ DEFAULT_KEY_PATH = os.path.expanduser("~/.mediaman/key")
 KEYPATH = config.load(CRYPTO_KEY_ENV_VAR, default=DEFAULT_KEY_PATH)
 
 OPENSSL_PREFERRED_BINS = [
+    "/usr/local/Cellar/libressl/3.2.2/bin",
     "/usr/local/Cellar/libressl/2.9.2/bin",
     "/usr/bin",
 ]
@@ -190,9 +191,11 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
             raise RuntimeError(ERROR_MULTIPLE_REMOTE_FILES.format(self.service))
 
         if not files:
+            logger.debug(f"creating metadata")
             self.metadata = create_metadata()
             self.update_metadata()
         else:
+            logger.debug(f"loading metadata")
             self.load_metadata(files[0])
 
     def update_metadata(self):

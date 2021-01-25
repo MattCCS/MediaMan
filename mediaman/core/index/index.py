@@ -91,14 +91,18 @@ class Index(base.BaseIndex):
         file_list = self.service.search_by_name(Index.INDEX_FILENAME)
         files = file_list.results()
 
+        logger.debug(f"files = {files}")
+        logger.debug(f"file_list = {file_list}")
         if len(files) > 1:
             raise RuntimeError(ERROR_MULTIPLE_REMOTE_INDICES.format(self.service))
 
         # new index file
         if not files:
+            logger.debug(f"creating metadata")
             self.metadata = create_metadata()
             self.update_metadata()
         else:
+            logger.debug(f"loading metadata")
             self.load_metadata(files[0])
 
     def update_metadata(self):
