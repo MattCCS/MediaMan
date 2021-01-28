@@ -12,6 +12,10 @@ def load_local(config):
 
 
 def load_drive(config):
+    # Apply monkey patches first
+    from mediaman.patches.drive import patch_googleapiclient
+    patch_googleapiclient.patch_googleapiclient_http()
+
     from mediaman.services.drive import service as driveservice
     return driveservice.DriveService(config)
 
