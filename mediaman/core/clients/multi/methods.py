@@ -71,54 +71,57 @@ def multi_apply_concurrent(clients, func_name, *args, **kwargs):
 #             return
 
 
+default_apply = multi_apply_concurrent
+
+
 def force_init(clients):
     logger.warn("this is disabled")
     # return multi_apply_concurrent(clients, "force_init")
 
 
 def list_files(clients) -> Iterable[models.Response]:
-    return apply_consecutive(clients, "list_files")
+    return default_apply(clients, "list_files")
 
 
 def has(clients, file_path) -> Iterable[models.Response]:
-    return apply_consecutive(clients, "has", file_path)
+    return default_apply(clients, "has", file_path)
 
 
 def has_hash(clients, hash) -> Iterable[models.Response]:
-    return apply_consecutive(clients, "has_hash", hash)
+    return default_apply(clients, "has_hash", hash)
 
 
 def has_uuid(clients, uuid) -> Iterable[models.Response]:
-    return apply_consecutive(clients, "has_uuid", uuid)
+    return default_apply(clients, "has_uuid", uuid)
 
 
 def has_name(clients, name) -> Iterable[models.Response]:
-    return apply_consecutive(clients, "has_name", name)
+    return default_apply(clients, "has_name", name)
 
 
 def search_by_name(clients, file_name) -> Iterable[models.Response]:
-    return apply_consecutive(clients, "search_by_name", file_name)
+    return default_apply(clients, "search_by_name", file_name)
 
 
 def fuzzy_search_by_name(clients, file_name) -> Iterable[models.Response]:
-    return apply_consecutive(clients, "fuzzy_search_by_name", file_name)
+    return default_apply(clients, "fuzzy_search_by_name", file_name)
 
 
 def search_by_hash(clients, hash) -> Iterable[models.Response]:
-    return apply_consecutive(clients, "search_by_hash", hash)
+    return default_apply(clients, "search_by_hash", hash)
 
 
 def upload(clients, file_path) -> Iterable[models.Response]:
-    return apply_consecutive(clients, "upload", file_path)
+    return default_apply(clients, "upload", file_path)
 
 
 def stats(clients) -> Iterable[models.Response]:
-    return apply_consecutive(clients, "stats")
+    return default_apply(clients, "stats")
 
 
 def capacity(clients) -> Iterable[models.Response]:
-    return apply_consecutive(clients, "capacity")
+    return default_apply(clients, "capacity")
 
 
 def refresh_global_hashes(clients, hashes_by_hash) -> Iterable[models.Response]:
-    return apply_consecutive(clients, "refresh_global_hashes", hashes_by_hash)
+    return default_apply(clients, "refresh_global_hashes", hashes_by_hash)
