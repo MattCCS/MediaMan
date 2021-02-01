@@ -1,0 +1,19 @@
+-r base-requirements.txt
+
+# asn1crypto
+# cachetools
+# cffi
+# google-api-python-client
+# google-auth
+# google-auth-httplib2
+# httplib2==0.15
+# idna
+# oauth2client
+# pyasn1
+# pyasn1-modules
+# pycparser
+# PyYAML
+# rsa
+# six
+# sortedcontainers
+# uritemplate
