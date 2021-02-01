@@ -177,7 +177,7 @@ def add_commands(subparsers, service=None):
     p_fuzzy = add_parser(Action.FUZZY.value, description=f"[{service}] -- {FUZZY_TEXT_SERVICE}" if service else FUZZY_TEXT)
     add_parser(Action.STATS.value, description=f"[{service}] -- {STATS_TEXT_SERVICE}" if service else STATS_TEXT)
     add_parser(Action.CAPACITY.value, description=f"[{service}] -- {CAPACITY_TEXT_SERVICE}" if service else CAPACITY_TEXT)
-    add_parser(Action.CONFIG.value, description=f"[{service}] -- {CONFIG_TEXT_SERVICE}" if service else CONFIG_TEXT)
+    p_config = add_parser(Action.CONFIG.value, description=f"[{service}] -- {CONFIG_TEXT_SERVICE}" if service else CONFIG_TEXT)
     add_parser(Action.REFRESH.value, description=f"[{service}] -- {REFRESH_TEXT_SERVICE}" if service else REFRESH_TEXT)
     p_search_by_hash = add_parser(Action.SEARCH_BY_HASH.value, description=f"[{service}] -- {SEARCH_BY_HASH_TEXT_SERVICE}" if service else SEARCH_BY_HASH_TEXT)
 
@@ -190,6 +190,9 @@ def add_commands(subparsers, service=None):
 
     for parser in [p_has, p_get, p_put, p_search, p_fuzzy]:
         parser.add_argument("files", nargs="+")
+
+    for parser in [p_config]:
+        parser.add_argument("-e", "--edit", action="store_true", default=False, help="Edit the config file with your $EDITOR")
 
     for parser in [p_search_by_hash]:
         parser.add_argument("hashes", nargs="+")
@@ -244,13 +247,14 @@ def run_file_list(results, all_mode=False):
 def main():
     args = parse_args()
 
+    import os
     import pathlib
 
     from mediaman import config
     from mediaman.core import api
     from mediaman.core import watertable
 
-    root = pathlib.Path(config.load("SAVED_PWD", default="."))
+    root = pathlib.Path(os.environ.get("SAVED_PWD", "."))
 
     service_selector = args.service
     all_mode = service_selector == "all"
@@ -275,9 +279,12 @@ def main():
         exit(0)
 
     if args.action == "config":
-        import pprint
-        print(pprint.pformat(api.run_config(args.service)))
-        exit(0)
+        if args.edit:
+            config.launch_editor()
+        else:
+            import pprint
+            print(pprint.pformat(api.run_config(args.service)))
+            exit(0)
     elif args.action == "services":
         print(run_services())
         exit(0)

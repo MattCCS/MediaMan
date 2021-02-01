@@ -120,6 +120,7 @@ def list_file(drive, file_id):
 
 def exists(drive, file_id, folder_id=None):
     # TODO: use folder_id param
+    logger.warning("`folder_id` usage is not yet implemented in this method!")
     try:
         list_file(drive, file_id)
         return True

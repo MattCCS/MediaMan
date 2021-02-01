@@ -1,4 +1,6 @@
 
+import traceback
+
 from mediaman import config
 from mediaman.core import loader
 from mediaman.core import logtools
@@ -26,9 +28,19 @@ POLICY = None
 
 
 def load_service_names():
-    config_services = config.load_safe(SERVICES_CONFIG_KEY)
+    if not config.configuration_exists():
+        return []
+
+    try:
+        config_services = config.load_safe(SERVICES_CONFIG_KEY)
+    except TypeError:
+        logger.error(traceback.format_exc())
+        return []
+
     if SERVICE_NICKNAME_ALL in config_services:
-        exit(ERROR_RESERVED_SERVICE_NICKNAME)
+        logger.fatal(ERROR_RESERVED_SERVICE_NICKNAME)
+        return []
+
     return [SERVICE_NICKNAME_ALL] + list(config_services)
 
 

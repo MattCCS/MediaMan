@@ -46,7 +46,7 @@ TEST_SESH = {}  # name: salt
 
 def form_path_prepend():
     global OPENSSL_PREFERRED_BINS
-    return ":".join(OPENSSL_PREFERRED_BINS + [config.load_safe("PATH")])
+    return ":".join(OPENSSL_PREFERRED_BINS + [config.load_safe("PATH")])  # TODO: replace with env call
 
 
 def form_subprocess_environ():

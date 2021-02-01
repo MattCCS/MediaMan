@@ -1,5 +1,9 @@
 
 import os
+import pathlib
+import shutil
+import sys
+
 import yaml
 
 
@@ -7,6 +11,10 @@ CONFIGURATION_ENV_VAR = "MMCONFIG"
 DEFAULT_CONFIGURATION_PATH = "config.yaml"
 CONFIGURATION_PATH = os.environ.get(CONFIGURATION_ENV_VAR, DEFAULT_CONFIGURATION_PATH)
 CONFIGURATION = None
+
+EDITOR_ENV_VAR = "EDITOR"
+DEFAULT_EDITOR = "nano"
+EDITOR_NAME = os.environ.get(EDITOR_ENV_VAR, DEFAULT_EDITOR)
 
 
 ERROR_GENERIC_CONFIGURATION_FAILURE = f"""\
@@ -17,13 +25,17 @@ You can control the config file path by setting the environment variable
 '{CONFIGURATION_ENV_VAR}'.  Otherwise, the default path is '{DEFAULT_CONFIGURATION_PATH}'."""
 
 
+def configuration_exists():
+    return pathlib.Path(CONFIGURATION_PATH).is_file()
+
+
 def reload_configuration():
     global CONFIGURATION
     assert CONFIGURATION_PATH
     try:
         with open(CONFIGURATION_PATH) as infile:
             CONFIGURATION = yaml.safe_load(infile)
-    except FileNotFoundError as exc:
+    except FileNotFoundError:
         import traceback
         print(traceback.format_exc())
         exit_with_generic_warning()
@@ -37,11 +49,15 @@ def ensure_configuration():
 def load(key, default=None):
     """
     Loads the given key from the preset configuration YAML file.
+
     Falls back to os.environ if no results found.
     Returns `default` (default None) if key not present.
     """
     ensure_configuration()
-    return CONFIGURATION.get(key, os.environ.get(key, default))
+    try:
+        return CONFIGURATION.get(key, os.environ.get(key, default))
+    except AttributeError as exc:
+        raise Exception(ERROR_GENERIC_CONFIGURATION_FAILURE) from exc
 
 
 def load_safe(key):
@@ -57,4 +73,32 @@ def load_safe(key):
 
 
 def exit_with_generic_warning():
-    exit(ERROR_GENERIC_CONFIGURATION_FAILURE)
+    sys.exit(ERROR_GENERIC_CONFIGURATION_FAILURE)
+
+
+def launch_editor():
+    import subprocess
+
+    if not configuration_exists():
+        print(f"[!] No file was found at the path '{CONFIGURATION_PATH}'")
+        print(f"    Make sure that your config file environment variable "
+              f"('{CONFIGURATION_ENV_VAR}') is correct first.")
+        print(f"[?] Would like to create a new config file?")
+        consent = input(f"    [Y/n] ")
+
+        if consent != "Y":
+            print()
+            exit_with_generic_warning()
+
+        print(f"[?] Would you like the file to be [B]lank, or to start from a [T]emplate?")
+        choice = input(f"    [B/T/n] ")
+
+        if choice == "B":
+            pathlib.Path(CONFIGURATION_PATH).touch(mode=0o600, exist_ok=True)
+        elif choice == "T":
+            shutil.copy("config.yaml.sample", CONFIGURATION_PATH)
+        else:
+            print()
+            exit_with_generic_warning()
+
+    subprocess.call([EDITOR_NAME, CONFIGURATION_PATH], shell=False)
