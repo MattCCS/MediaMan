@@ -6,7 +6,7 @@ import shutil
 
 from mediaman.core import logtools
 
-logger = logtools.new_logger("mediaman.services.local.methods")
+logger = logtools.new_logger(__name__)
 
 
 WRITE_BUFFER = 1_000_000

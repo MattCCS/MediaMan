@@ -7,7 +7,7 @@ from mediaman.core import logtools
 from mediaman.core import validation
 from mediaman.services import loader as services_loader
 
-logger = logtools.new_logger("mediaman.core.policy")
+logger = logtools.new_logger(__name__)
 
 
 __all__ = [

@@ -11,7 +11,7 @@ from mediaman.core import models
 from mediaman.core import settings
 from mediaman.middleware import simple
 
-logger = logtools.new_logger("mediaman.middleware.crypto")
+logger = logtools.new_logger(__name__)
 
 
 def init(func):

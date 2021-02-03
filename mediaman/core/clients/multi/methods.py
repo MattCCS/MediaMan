@@ -7,7 +7,7 @@ from typing import Iterable
 from mediaman.core import logtools
 from mediaman.core import models
 
-logger = logtools.new_logger("mediaman.core.clients.multi.methods")
+logger = logtools.new_logger(__name__)
 
 
 def apply_consecutive(clients, func_name, *args, **kwargs):

@@ -13,7 +13,7 @@ from mediaman.core.clients.multi import abstract
 from mediaman.core.clients.multi import methods
 from mediaman.core.models import MultiResultQuota
 
-logger = logtools.new_logger("mediaman.core.clients.multi.globalmulticlient")
+logger = logtools.new_logger(__name__)
 
 
 def gen_first_valid(gen):

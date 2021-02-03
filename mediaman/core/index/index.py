@@ -15,7 +15,7 @@ from mediaman.core import settings
 from mediaman.core.index import base
 from mediaman.core.index import migration
 
-logger = logtools.new_logger("mediaman.core.index.index")
+logger = logtools.new_logger(__name__)
 
 
 ERROR_MULTIPLE_REMOTE_INDICES = "\

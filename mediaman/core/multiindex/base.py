@@ -10,7 +10,7 @@ from mediaman.core.multiindex import abstract
 from mediaman.core.utils import paths
 from mediaman.services.abstract import models as abstractmodels
 
-logger = logtools.new_logger("mediaman.core.multiindex.base")
+logger = logtools.new_logger(__name__)
 
 
 class BaseMultiIndex(abstract.AbstractMultiIndex):

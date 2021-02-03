@@ -4,7 +4,7 @@ import traceback
 
 from mediaman.core import logtools
 
-logger = logtools.new_logger("mediaman.core.utils.paths")
+logger = logtools.new_logger(__name__)
 
 
 def resolve_abs_path(root, file_id):

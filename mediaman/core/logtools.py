@@ -1,5 +1,8 @@
 """
 Useful logging utilities.
+
+The most common pattern for getting a logger is:
+    logger = new_logger(__name__)
 """
 
 import logging
@@ -11,7 +14,6 @@ logging.basicConfig(format=settings.LOG_FORMAT)
 
 __all__ = [
     "new_logger",
-    "get_logger",
     "set_level",
 ]
 
@@ -73,6 +75,7 @@ def add_log_parser(parser, logger=None):
     """
 
     def set_level_on_parse(level):
+        level = level.upper()
         if level in settings.LOG_LEVELS:
             set_level(level, logger=logger)
         return level

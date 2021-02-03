@@ -7,7 +7,7 @@ from mediaman.services.abstract import service
 from mediaman.services.drive import methods
 from mediaman.services.drive import models
 
-logger = logtools.new_logger("mediaman.services.drive.service")
+logger = logtools.new_logger(__name__)
 
 
 class DriveService(service.AbstractService):

@@ -12,7 +12,7 @@ import oauth2client.file
 
 from mediaman.core import logtools
 
-logger = logtools.new_logger("mediaman.services.drive.methods")
+logger = logtools.new_logger(__name__)
 
 # This suppresses warnings from googleapiclient, and
 # prevents it from polluting the log files.
