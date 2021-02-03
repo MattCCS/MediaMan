@@ -6,9 +6,9 @@ import subprocess
 import tempfile
 
 from mediaman import config
-from mediaman.core import logtools
+from mediaman import logtools
+from mediaman import settings
 from mediaman.core import models
-from mediaman.core import settings
 from mediaman.middleware import simple
 
 logger = logtools.new_logger("mediaman.middleware.crypto")

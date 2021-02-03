@@ -32,7 +32,12 @@ You can control the config file path by setting the environment variable
 
 
 def configuration_exists():
-    return pathlib.Path(CONFIGURATION_PATH).is_file()
+    try:
+        return pathlib.Path(CONFIGURATION_PATH).is_file()
+    except PermissionError:
+        import traceback
+        print(traceback.format_exc())
+        exit_with_generic_warning()
 
 
 def reload_configuration():

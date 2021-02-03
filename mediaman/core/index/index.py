@@ -8,10 +8,10 @@ import shutil
 import tempfile
 import uuid
 
+from mediaman import logtools
+from mediaman import settings
 from mediaman.core import hashing
-from mediaman.core import logtools
 from mediaman.core import models
-from mediaman.core import settings
 from mediaman.core.index import base
 from mediaman.core.index import migration
 

@@ -4,7 +4,7 @@ Useful logging utilities.
 
 import logging
 
-from mediaman.core import settings
+from mediaman import settings
 
 logging.basicConfig(format=settings.LOG_FORMAT)
 

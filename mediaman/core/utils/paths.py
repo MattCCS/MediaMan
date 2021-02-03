@@ -2,7 +2,7 @@
 import pathlib
 import traceback
 
-from mediaman.core import logtools
+from mediaman import logtools
 
 logger = logtools.new_logger("mediaman.core.utils.paths")
 

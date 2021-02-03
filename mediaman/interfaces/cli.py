@@ -2,8 +2,8 @@
 import enum
 import sys
 
+from mediaman import logtools
 from mediaman.core import api
-from mediaman.core import logtools
 
 
 COMMAND_NAME = "mm"

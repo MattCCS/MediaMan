@@ -2,8 +2,8 @@
 from functools import partial
 from typing import List, Generator
 
+from mediaman import logtools
 from mediaman.core import hashing
-from mediaman.core import logtools
 from mediaman.core import models
 from mediaman.core import validation
 from mediaman.core.multiindex import abstract

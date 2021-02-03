@@ -4,7 +4,7 @@
 import concurrent.futures
 from typing import Iterable
 
-from mediaman.core import logtools
+from mediaman import logtools
 from mediaman.core import models
 
 logger = logtools.new_logger("mediaman.core.clients.multi.methods")

@@ -2,7 +2,7 @@
 Class to manage a Service connection to Google Drive.
 """
 
-from mediaman.core import logtools
+from mediaman import logtools
 from mediaman.services.abstract import service
 from mediaman.services.drive import methods
 from mediaman.services.drive import models

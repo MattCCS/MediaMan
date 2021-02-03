@@ -1,6 +1,6 @@
 
+from mediaman import settings
 from mediaman.core import hashing
-from mediaman.core import settings
 
 
 VERSION_KEY = "version"

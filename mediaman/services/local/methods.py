@@ -4,7 +4,7 @@ import os
 import pathlib
 import shutil
 
-from mediaman.core import logtools
+from mediaman import logtools
 
 logger = logtools.new_logger("mediaman.services.local.methods")
 

@@ -10,7 +10,7 @@ import httplib2
 import oauth2client.client
 import oauth2client.file
 
-from mediaman.core import logtools
+from mediaman import logtools
 
 logger = logtools.new_logger("mediaman.services.drive.methods")
 

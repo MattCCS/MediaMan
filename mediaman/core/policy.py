@@ -2,8 +2,8 @@
 import traceback
 
 from mediaman import config
+from mediaman import logtools
 from mediaman.core import loader
-from mediaman.core import logtools
 from mediaman.core import validation
 from mediaman.services import loader as services_loader
 
