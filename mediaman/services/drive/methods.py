@@ -1,6 +1,7 @@
 
 import io
 import logging
+import os
 
 import apiclient.discovery
 import apiclient.http
@@ -56,6 +57,13 @@ def ensure_directory(drive, destination):
 
 def authenticate(client_secrets, credentials_path):
     assert client_secrets or credentials_path
+
+    # TODO: find a cleaner place to perform path expansion of config values
+    # TODO: maybe write a config parsing class?
+    if client_secrets:
+        client_secrets = os.path.expanduser(client_secrets)
+    if credentials_path:
+        credentials_path = os.path.expanduser(credentials_path)
 
     credentials = None
     if credentials_path:
