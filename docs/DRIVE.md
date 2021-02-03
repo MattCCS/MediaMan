@@ -28,7 +28,7 @@ By default, this path is `~/.mediaman/credentials/drive`.
     6. Click **Save and Continue**
     7. Click **Add or Remove Scopes**
     8. Search for "Google Drive API" and choose the `.../auth/drive` scope
-        - IT IS THUS VERY IMPORTANT THAT YOU PROTECT THESE CREDENTIALS.
+        - THUS, IT IS VERY IMPORTANT THAT YOU PROTECT THESE CREDENTIALS.
         - `.../auth/drive.file` ?
     9. Click **Save and Continue**
     10. Add yourself as a Test User (your Gmail)
@@ -49,7 +49,7 @@ By default, this path is `~/.mediaman/credentials/drive`.
     3. Choose the appropriate Google Account
     4. It will say "Google hasn't verified this app", hit **Continue**
     5. It will ask "Grant MediaManApp permission" to "See, edit, create, and delete all of your Google Drive files", click **Allow**
-        - AGAIN, IS THUS VERY IMPORTANT THAT YOU PROTECT THESE CREDENTIALS.
+        - AGAIN, IT IS VERY IMPORTANT THAT YOU PROTECT THESE CREDENTIALS.
     6. It will say "Confirm your choices", click **Allow**
     7. Copy the code it shows you, enter it at the "Enter verification code:" prompt MediaMan is showing
     8. MediaMan will create a new MediaMan folder in your Google Drive and report back 0 files.

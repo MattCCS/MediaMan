@@ -1,13 +1,27 @@
 
+import pathlib
+
+from mediaman import config
 from mediaman.services.abstract import models
 
 
 class DriveConfig(models.BaseConfig):
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.client_secrets = self.extra["GOOGLE_CLIENT_SECRETS"]
-        self.credentials = self.extra["GOOGLE_CREDENTIALS"]
+    def __init__(self, _config):
+        super().__init__(_config)
+        client_secrets = self.extra["GOOGLE_CLIENT_SECRETS"]
+        credentials = self.extra["GOOGLE_CREDENTIALS"]
+
+        client_secrets = pathlib.Path(client_secrets).expanduser()
+        credentials = pathlib.Path(credentials).expanduser()
+
+        if not client_secrets.is_absolute():
+            client_secrets = config.ROOT_PATH / client_secrets
+        if not credentials.is_absolute():
+            credentials = config.ROOT_PATH / credentials
+
+        self.client_secrets = client_secrets
+        self.credentials = credentials
 
 
 class DriveReceiptFile(models.AbstractReceiptFile):
