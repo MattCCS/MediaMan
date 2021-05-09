@@ -1,5 +1,8 @@
 -r base-requirements.txt
 
+google-api-python-client
+oauth2client
+
 # asn1crypto
 # cachetools
 # cffi
