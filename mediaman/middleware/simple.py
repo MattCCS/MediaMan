@@ -65,3 +65,7 @@ class SimpleMiddleware(abstract.AbstractMiddleware):
     @init
     def refresh_global_hashes(self, request):
         return self.service.refresh_global_hashes(request)
+
+    @init
+    def tag(self, request, *args, **kwargs):
+        return self.service.tag(request, *args, **kwargs)

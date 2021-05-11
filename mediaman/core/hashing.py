@@ -83,6 +83,10 @@ def hash(path, preference=None):
     return func(path)
 
 
-def is_preferred_hash(labeled_hash):
-    start = PREFERRED_HASH.value + DELIMITER
+def is_hash(hash_enum: Hash, labeled_hash):
+    start = hash_enum.value + DELIMITER
     return labeled_hash.startswith(start)
+
+
+def is_preferred_hash(labeled_hash):
+    return is_hash(hash_enum=PREFERRED_HASH, labeled_hash=labeled_hash)

@@ -122,3 +122,7 @@ def capacity(clients) -> Iterable[models.Response]:
 
 def refresh_global_hashes(clients, hashes_by_hash) -> Iterable[models.Response]:
     return apply_consecutive(clients, "refresh_global_hashes", hashes_by_hash)
+
+
+def tag(clients, *args, **kwargs) -> Iterable[models.Response]:
+    return apply_consecutive(clients, "tag", *args, **kwargs)

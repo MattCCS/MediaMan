@@ -231,18 +231,7 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
         self.metadata = self.load_metadata_json(metadata_file)
         logger.debug(f"Loaded metadata: {self.metadata}")
 
-        if "version" not in self.metadata:
-            logger.critical(f"'version' field missing from metadata!  This is an outdated or unversioned meta file.  You will need to fix it by running `mm <service> refresh`.")
-            raise RuntimeError("Unversioned metadata")
-
-        version = self.metadata["version"]
-        if version > settings.VERSION:
-            logger.critical(f"Metadata version ({version}) exceeds software version ({settings.VERSION}).  You need to update your software to parse this metadata file.")
-            raise RuntimeError("Outdated software")
-
-        if version < settings.VERSION:
-            logger.critical(f"Metadata version ({version}) is below software version ({settings.VERSION}).  You need to update it by running `mm <service> refresh`.")
-            raise RuntimeError("Outdated metadata")
+        # TODO: some sane way for crypto to manage metadata version (or just combine the files...?)
 
     def track_cipher(self, key, cipher, digest):
         global CIPHER

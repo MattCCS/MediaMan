@@ -77,3 +77,8 @@ class AbstractClient(abc.ABC):
     @abc.abstractmethod
     def refresh_global_hashes(self, request):
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def tag(self, requests=None, add=None, remove=None, set=None) -> models.AbstractResultFileList:
+        """Tag the file(s) described by the given request(s)"""
+        raise NotImplementedError()

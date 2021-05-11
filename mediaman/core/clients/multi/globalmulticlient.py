@@ -193,6 +193,10 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
         return None
 
     def stats(self):
+        # TODO: don't double-count identical files!
+        # TODO: method should return hashes instead.. but what about SHA vs. XXH?
+        # NOTE: This is not trivial.
+        raise NotImplementedError()
         results = gen_all(methods.stats(self.clients))
         grand_file_count = 0
         is_partial = False
@@ -216,7 +220,11 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
                 grand_total += response.total()
             else:
                 is_partial = True
-        return MultiResultQuota(grand_used, grand_allowed, grand_total, is_partial)
+        return MultiResultQuota(
+            used=grand_used,
+            allowed=grand_allowed,
+            total=grand_total,
+            is_partial=is_partial)
 
     def sync(self):
         logger.info("Collecting file lists and capacities...")
@@ -336,3 +344,6 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
                 if not keys & deduped_results:
                     yield each
                 deduped_results.update(keys)
+
+    def tag(self, *args, **kwargs):
+        raise NotImplementedError()  # `mm tag` is not allowed (yet)

@@ -46,6 +46,7 @@ class SingleClient(abstract.AbstractSingleClient):
         return self.index.stream_range(root, file_id, offset, length)
 
     def stats(self):
+        # TODO: define a real object, not a dict
         files = self.list_files()
         return {"file_count": len(files)}
 
@@ -62,3 +63,6 @@ class SingleClient(abstract.AbstractSingleClient):
 
     def refresh_global_hashes(self, request):
         return self.index.refresh_global_hashes(request)
+
+    def tag(self, requests=None, add=None, remove=None, set=None):
+        return self.index.tag(requests=requests, add=add, remove=remove, set=set)

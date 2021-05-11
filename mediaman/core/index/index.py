@@ -40,7 +40,7 @@ def make_temp_directory():
         shutil.rmtree(temp_dir)
 
 
-def create_file(id, name, sid, size, hashes, merged_hashes):
+def create_file(id, name, sid, size, hashes, merged_hashes, tags):
     assert isinstance(hashes, list)
     assert isinstance(merged_hashes, list)
     return {
@@ -50,6 +50,7 @@ def create_file(id, name, sid, size, hashes, merged_hashes):
         "size": size,
         "hashes": hashes,
         "merged_hashes": merged_hashes,
+        "tags": tags,
     }
 
 
@@ -139,16 +140,16 @@ class Index(base.BaseIndex):
         logger.debug(f"Loaded metadata: {metadata}")
 
         if "version" not in metadata:
-            logger.critical(f"'version' field missing from metadata!  This is an outdated or unversioned index file.  You will need to fix it by running `mm <service> refresh`.")
+            logger.critical(f"Problem reading metadata for index {self}: 'version' field missing from metadata!  This is an outdated or unversioned index file.  You will need to fix it by running `mm <service> refresh`.")
             raise RuntimeError("Unversioned metadata")
 
         version = metadata["version"]
         if version > settings.VERSION:
-            logger.critical(f"Metadata version ({version}) exceeds software version ({settings.VERSION}).  You need to update your software to parse this index file.")
+            logger.critical(f"Problem reading metadata for index {self}: Metadata version ({version}) exceeds software version ({settings.VERSION}).  You need to update your software to parse this index file.")
             raise RuntimeError("Outdated software")
 
         if version < settings.VERSION:
-            logger.critical(f"Metadata version ({version}) is below software version ({settings.VERSION}).  You need to update it by running `mm <service> refresh`.")
+            logger.critical(f"Problem reading metadata for index {self}: Metadata version ({version}) is below software version ({settings.VERSION}).  You need to update it by running `mm <service> refresh`.")
             raise RuntimeError("Outdated metadata")
 
         self.metadata = metadata
@@ -222,12 +223,13 @@ class Index(base.BaseIndex):
         merged_hashes = []
 
         self.track_file(create_file(
-            upload_request.id,
-            name,
-            receipt.id(),
-            size,
-            hashes,
-            merged_hashes,
+            id=upload_request.id,
+            name=name,
+            sid=receipt.id(),
+            size=size,
+            hashes=hashes,
+            merged_hashes=merged_hashes,
+            tags=[],
         ))
 
         return self.get_metadata_by_hash(hash)
@@ -365,7 +367,7 @@ class Index(base.BaseIndex):
 
         print(f"Repaired metadata: {metadata}")
         inp = input("Does everything look good? [Y/n] ")
-        if inp not in 'yY':
+        if inp not in ('y', 'Y'):
             print("Cancelled.")
             return
 
@@ -373,12 +375,12 @@ class Index(base.BaseIndex):
         self.update_metadata()
 
         inp = input("Would you like to refresh the file list? [Y/n] ")
-        if inp in 'yY':
+        if inp in ('y', 'Y'):
             logger.info(f"Old metadata: {raw_metadata}")
             self.refresh_file_list(metadata)
 
         inp = input("Would you like to refresh the file hashes?  This may take a long time, but is useful when you have changed the preferred hash function. [Y/n]  ")
-        if inp in 'yY':
+        if inp in ('y', 'Y'):
             self.refresh_hashes()
 
         return
@@ -410,12 +412,13 @@ class Index(base.BaseIndex):
             merged_hashes = file_metadata["merged_hashes"]
 
             new_file = create_file(
-                id,
-                name,
-                sid,
-                size,
-                hashes,
-                merged_hashes,
+                id=id,
+                name=name,
+                sid=sid,
+                size=size,
+                hashes=hashes,
+                merged_hashes=merged_hashes,
+                tags=[],
             )
             new_files.append(new_file)
             logger.debug(new_file)
@@ -425,7 +428,7 @@ class Index(base.BaseIndex):
         logger.info(f"New metadata: {new_metadata}")
 
         inp = input("Does everything look good? [Y/n] ")
-        if inp not in 'yY':
+        if inp not in ('y', 'Y'):
             print("Cancelled.")
             return
 
@@ -502,3 +505,36 @@ class Index(base.BaseIndex):
         self.update_metadata()
 
         return result
+
+    @init
+    def tag(self, requests=None, add=None, remove=None, set=None):
+        if not requests:
+            return self.files()
+
+        requests = list(requests)
+        logger.debug(f"Applying tags add={add}, remove={remove}, set={set} to files {requests}")
+
+        updated_files = []
+        for request in requests:
+            file = self.files()[self.hash_to_metadata_map[request.hash]]
+            logger.trace(f"Tagging file {file}")
+            logger.trace(f"Original tags: {file['tags']}")
+
+            tags = frozenset(file["tags"])
+            if add:
+                tags |= frozenset(add)
+            if remove:
+                tags -= frozenset(remove)
+            if set:
+                tags = frozenset(set)  # I apologize...
+
+            file["tags"] = list(sorted(tags))
+            logger.trace(f"New tags: {file['tags']}")
+
+            updated_files.append(file)
+
+        # TODO: confirm with user before saving changes
+
+        self.update_metadata()
+
+        return updated_files

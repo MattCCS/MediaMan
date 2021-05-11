@@ -35,6 +35,7 @@ CAPACITY_TEXT = "Report on the visible capacity of MediaMan"
 CONFIG_TEXT = "Show the config info of MediaMan"
 REFRESH_TEXT = "Refresh the tracking info of MediaMan"
 SEARCH_BY_HASH_TEXT = "Search MediaMan for the given hash(es)"
+TAG_TEXT = "Set tags on one or more files in MediaMan"
 
 LIST_TEXT_SERVICE = "List all files indexed by this service"
 HAS_TEXT_SERVICE = "Check whether this service has the given file(s)"
@@ -50,6 +51,7 @@ CONFIG_TEXT_SERVICE = "Show the config info of this service"
 REFRESH_TEXT_SERVICE = "Refresh the tracking info of this service"
 REMOVE_TEXT_SERVICE = "Remove the given file(s) from this service (by hash only)"
 SEARCH_BY_HASH_TEXT_SERVICE = "Search this service for the given hash(es)"
+TAG_TEXT_SERVICE = "Set tags on one or more files in this service"
 
 
 class Action(enum.Enum):
@@ -70,6 +72,7 @@ class Action(enum.Enum):
     REFRESH = "refresh"
     REMOVE = "remove"
     SEARCH_BY_HASH = "search-by-hash"
+    TAG = "tag"
 
 
 ACTIONS = frozenset(action.value for action in Action)
@@ -180,6 +183,7 @@ def add_commands(subparsers, service=None):
     p_config = add_parser(Action.CONFIG.value, description=f"[{service}] -- {CONFIG_TEXT_SERVICE}" if service else CONFIG_TEXT)
     add_parser(Action.REFRESH.value, description=f"[{service}] -- {REFRESH_TEXT_SERVICE}" if service else REFRESH_TEXT)
     p_search_by_hash = add_parser(Action.SEARCH_BY_HASH.value, description=f"[{service}] -- {SEARCH_BY_HASH_TEXT_SERVICE}" if service else SEARCH_BY_HASH_TEXT)
+    p_tag = add_parser(Action.TAG.value, description=f"[{service}] -- {TAG_TEXT_SERVICE}" if service else TAG_TEXT)
 
     for parser in [p_stream, p_streamrange]:
         parser.add_argument("file")
@@ -196,6 +200,12 @@ def add_commands(subparsers, service=None):
 
     for parser in [p_search_by_hash]:
         parser.add_argument("hashes", nargs="+")
+
+    for parser in [p_tag]:
+        parser.add_argument("hashes", nargs="+")
+        parser.add_argument("-a", "--add", nargs="+", help="Add the given tag(s) (idempotent)")
+        parser.add_argument("-r", "--remove", nargs="+", help="Remove the given tag(s) (idempotent)")
+        parser.add_argument("-s", "--set", nargs="+", help="Set the given tag(s), removing any tags not mentioned")
 
 
 def run_services():
@@ -222,14 +232,14 @@ def human_bytes(n):
 def run_file_list(results, all_mode=False):
     from mediaman.core import watertable
 
-    columns = ((("service", 16),) if all_mode else ()) + (("name", 39 + (0 if all_mode else 19)), ("size", 9), ("hash", 22), ("id", 36))
+    columns = ((("service", 16),) if all_mode else ()) + (("name", 39 + (0 if all_mode else 19)), ("size", 9), ("hash", 22), ("id", 36), ("tags", 20))
 
     def files_iterator(responses):
         nonlocal all_mode
         if not all_mode:
             for (request, file_results_list) in responses:
                 for item in file_results_list:
-                    yield (item["name"], human_bytes(item["size"]), item["hashes"][-1], item["id"])
+                    yield (item["name"], human_bytes(item["size"]), item["hashes"][-1], item["id"], item["tags"])
         else:
             # TODO: this is screwed up, need to stick to classes better
             all_responses = responses
@@ -237,7 +247,7 @@ def run_file_list(results, all_mode=False):
                 for response_obj in responses:
                     if response_obj.response:
                         for item in response_obj.response:
-                            yield (response_obj.client.nickname(), item["name"], human_bytes(item["size"]), item["hashes"][-1], item["id"])
+                            yield (response_obj.client.nickname(), item["name"], human_bytes(item["size"]), item["hashes"][-1], item["id"], item["tags"])
 
     gen = watertable.table_stream(columns, files_iterator(results))
     for row in gen:
@@ -373,7 +383,20 @@ def main():
         if service_selector != "all":
             results = [results]
         for result in results:
-            print(repr(results))
+            print(repr(result))
+    elif args.action == Action.TAG.value:
+        results = api.run_tag(
+            root,
+            identifiers=args.hashes,
+            add=args.add,
+            remove=args.remove,
+            set=args.set,
+            service_selector=service_selector,
+        )
+        if service_selector != "all":
+            results = [results]
+        for result in results:
+            print(result)
     else:
         raise NotImplementedError()
 

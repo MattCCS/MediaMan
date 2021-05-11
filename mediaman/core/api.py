@@ -90,3 +90,7 @@ def run_remove(*identifiers, service_selector=None):
 
 def run_search_by_hash(*identifiers, service_selector=None):
     return policy.load_client(service_selector=service_selector).search_by_hash(*identifiers)
+
+
+def run_tag(root, identifiers, add, remove, set, service_selector=None):
+    return policy.load_client(service_selector=service_selector).tag(root, identifiers=identifiers, add=add, remove=remove, set=set)
