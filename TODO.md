@@ -17,8 +17,9 @@
 - Control over syncing rules?  YAML file?  Allow/require user to set quotas?
 
 ## Bugs
+- `crypt` file metadata doesn't have its own migration handling
 - How to handle downloading files with name collisions?
-- Unicode isn't handled by well `list`
+- Unicode isn't handled well by `list`
 - empty files
     - Drive can't upload empty files
 

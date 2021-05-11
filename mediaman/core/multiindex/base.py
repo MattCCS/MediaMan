@@ -13,6 +13,19 @@ from mediaman.services.abstract import models as abstractmodels
 logger = logtools.new_logger(__name__)
 
 
+def resolve_identifier(root, identifier) -> models.Request:
+    if validation.is_valid_hash(identifier):
+        return models.Request(hash=identifier)
+
+    try:
+        abs_path = paths.resolve_abs_path(root, identifier)
+        return models.Request(path=abs_path)
+    except OSError:
+        logger.error(f"Identifier must be a hash or filepath.  Got '{identifier}'.")
+
+    return None
+
+
 class BaseMultiIndex(abstract.AbstractMultiIndex):
 
     def has(self, root, *file_paths) -> List[abstractmodels.AbstractResultFile]:
@@ -67,13 +80,10 @@ class BaseMultiIndex(abstract.AbstractMultiIndex):
         yield from zip(identifiers, map(self.client.search_by_hash, identifiers))
 
     def tag(self, root, identifiers=None, add=None, remove=None, set=None) -> List[abstractmodels.AbstractResultFile]:
-        for identifier in identifiers:
-            # TODO: this should allow any valid hash, or ID
-            if not validation.is_valid_hash(identifier):
-                logger.error(f"May only pass hashes to `tag` method, got '{identifier}'.")
-                return
+        requests = []
 
-        requests = list(
-            models.Request(id=None, path=None, hash=identifier)
-            for identifier in identifiers)
+        for identifier in identifiers:
+            if (request := resolve_identifier(root, identifier)):
+                requests.append(request)
+
         return self.client.tag(requests=requests, add=add, remove=remove, set=set)

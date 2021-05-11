@@ -516,7 +516,12 @@ class Index(base.BaseIndex):
 
         updated_files = []
         for request in requests:
-            file = self.files()[self.hash_to_metadata_map[request.hash]]
+            try:
+                file = self.files()[self.hash_to_metadata_map[request.hash]]
+            except KeyError:
+                logger.error(f"No such file found ({request}) in Index {self}!")
+                continue
+
             logger.trace(f"Tagging file {file}")
             logger.trace(f"Original tags: {file['tags']}")
 
