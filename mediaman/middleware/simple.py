@@ -15,14 +15,6 @@ def init(func):
 class SimpleMiddleware(abstract.AbstractMiddleware):
 
     @init
-    def name(self):
-        return self.service.name()
-
-    @init
-    def nickname(self):
-        return self.service.nickname()
-
-    @init
     def list_files(self):
         return self.service.list_files()
 

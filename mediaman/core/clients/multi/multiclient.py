@@ -20,8 +20,7 @@ class Multiclient(abstract.AbstractMulticlient):
         return gen_all(methods.list_files(self.clients))
 
     def has(self, request):
-        hash = request.hash
-        return gen_all(methods.has_hash(self.clients, hash))
+        return gen_all(methods.has(self.clients, request))
 
     def search_by_name(self, file_name):
         return gen_all(methods.search_by_name(self.clients, file_name))
@@ -30,8 +29,7 @@ class Multiclient(abstract.AbstractMulticlient):
         return gen_all(methods.fuzzy_search_by_name(self.clients, file_name))
 
     def upload(self, request):
-        path = request.path
-        return gen_all(methods.upload(self.clients, path))
+        return gen_all(methods.upload(self.clients, request))
 
     def download(self, root, file_path):
         raise RuntimeError()  # `mm all get` isn't allowed

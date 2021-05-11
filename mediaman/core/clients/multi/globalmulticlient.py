@@ -22,7 +22,7 @@ def gen_first_valid(gen):
         while True:
             if result.response:
                 yield result
-                gen.send(False)
+                gen.send(False)  # prompts a StopIteration from parent gen.
             else:
                 result = gen.send(True)
     except StopIteration:

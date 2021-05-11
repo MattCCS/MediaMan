@@ -229,7 +229,7 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
 
     def load_metadata(self, metadata_file):
         self.metadata = self.load_metadata_json(metadata_file)
-        logger.debug(f"Loaded metadata: {self.metadata}")
+        logger.trace(f"Loaded metadata: {self.metadata}")
 
         # TODO: some sane way for crypto to manage metadata version (or just combine the files...?)
 

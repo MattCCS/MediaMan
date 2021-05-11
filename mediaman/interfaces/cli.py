@@ -355,9 +355,9 @@ def main():
     elif args.action == "put":
         all_results = api.run_put(root, *args.files, service_selector=service_selector)
         if all_mode:
-            for results in all_results:
+            for (path, results) in all_results:
                 for result in results:
-                    print(repr(result))
+                    print(path, result)
         else:
             results = all_results
             for result in results:

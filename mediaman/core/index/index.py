@@ -137,7 +137,7 @@ class Index(base.BaseIndex):
 
     def load_metadata(self, index):
         metadata = self.load_metadata_json(index)
-        logger.debug(f"Loaded metadata: {metadata}")
+        logger.trace(f"Loaded metadata: {metadata}")
 
         if "version" not in metadata:
             logger.critical(f"Problem reading metadata for index {self}: 'version' field missing from metadata!  This is an outdated or unversioned index file.  You will need to fix it by running `mm <service> refresh`.")

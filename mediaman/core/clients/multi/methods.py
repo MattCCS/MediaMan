@@ -71,7 +71,7 @@ def multi_apply_concurrent(clients, func_name, *args, **kwargs):
 #             return
 
 
-default_apply = multi_apply_concurrent
+default_apply = apply_consecutive
 
 
 def force_init(clients):
