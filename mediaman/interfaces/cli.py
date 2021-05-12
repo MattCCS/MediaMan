@@ -264,7 +264,7 @@ def main():
     from mediaman.core import api
     from mediaman.core import watertable
 
-    root = pathlib.Path(os.environ.get("SAVED_PWD", "."))
+    root = pathlib.Path(os.environ.get("SAVED_PWD", os.environ.get("PWD", ".")))
 
     service_selector = args.service
     all_mode = service_selector == "all"
