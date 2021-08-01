@@ -170,7 +170,7 @@ def add_commands(subparsers, service=None):
         p_remove = add_parser(Action.REMOVE.value, description=f"[{service}] -- {REMOVE_TEXT_SERVICE}")
         p_remove.add_argument("hashes", nargs="+")
 
-    add_parser(Action.LIST.value, description=f"[{service}] -- {LIST_TEXT_SERVICE}" if service else LIST_TEXT)
+    p_list = add_parser(Action.LIST.value, description=f"[{service}] -- {LIST_TEXT_SERVICE}" if service else LIST_TEXT)
     p_has = add_parser(Action.HAS.value, description=f"[{service}] -- {HAS_TEXT_SERVICE}" if service else HAS_TEXT)
     p_get = add_parser(Action.GET.value, description=f"[{service}] -- {GET_TEXT_SERVICE}" if service else GET_TEXT)
     p_stream = add_parser(Action.STREAM.value, description=f"[{service}] -- {STREAM_TEXT_SERVICE}" if service else STREAM_TEXT)
@@ -207,6 +207,9 @@ def add_commands(subparsers, service=None):
         parser.add_argument("-r", "--remove", nargs="+", help="Remove the given tag(s) (idempotent)")
         parser.add_argument("-s", "--set", nargs="+", help="Set the given tag(s), removing any tags not mentioned")
 
+    for parser in [p_list, p_search, p_fuzzy, p_search_by_hash]:
+        parser.add_argument("-r", "--raw", action="store_true", default=False, help="Do not print an ASCII table")
+
 
 def run_services():
     return api.get_service_names()
@@ -229,27 +232,27 @@ def human_bytes(n):
     return f"{n:.2f}{abbrev}"
 
 
+def files_iterator(responses, all_mode):
+    if not all_mode:
+        for (request, file_results_list) in responses:
+            for item in file_results_list:
+                yield (item["name"], human_bytes(item["size"]), item["hashes"][-1], item["id"], item["tags"])
+    else:
+        # TODO: this is screwed up, need to stick to classes better
+        all_responses = responses
+        for (request, responses) in all_responses:
+            for response_obj in responses:
+                if response_obj.response:
+                    for item in response_obj.response:
+                        yield (response_obj.client.nickname(), item["name"], human_bytes(item["size"]), item["hashes"][-1], item["id"], item["tags"])
+
+
 def run_file_list(results, all_mode=False):
     from mediaman.core import watertable
 
     columns = ((("service", 16),) if all_mode else ()) + (("name", 39 + (0 if all_mode else 19)), ("size", 9), ("hash", 22), ("id", 36), ("tags", 20))
 
-    def files_iterator(responses):
-        nonlocal all_mode
-        if not all_mode:
-            for (request, file_results_list) in responses:
-                for item in file_results_list:
-                    yield (item["name"], human_bytes(item["size"]), item["hashes"][-1], item["id"], item["tags"])
-        else:
-            # TODO: this is screwed up, need to stick to classes better
-            all_responses = responses
-            for (request, responses) in all_responses:
-                for response_obj in responses:
-                    if response_obj.response:
-                        for item in response_obj.response:
-                            yield (response_obj.client.nickname(), item["name"], human_bytes(item["size"]), item["hashes"][-1], item["id"], item["tags"])
-
-    gen = watertable.table_stream(columns, files_iterator(results))
+    gen = watertable.table_stream(columns, files_iterator(results, all_mode))
     for row in gen:
         print(row)
 
@@ -285,7 +288,11 @@ def main():
         else:
             raise NotImplementedError()
 
-        run_file_list(results, all_mode=all_mode)
+        if args.raw:
+            for each in files_iterator(results, all_mode):
+                print(each)
+        else:
+            run_file_list(results, all_mode=all_mode)
         exit(0)
 
     if args.action == "config":

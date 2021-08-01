@@ -89,7 +89,7 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
             for each in result.response:
                 hashes = each["hashes"]
                 if not set(hashes) & deduped_results:
-                    yield {"id": each["id"], "name": each["name"], "hashes": hashes, "size": each["size"]}
+                    yield {"id": each["id"], "name": each["name"], "hashes": hashes, "size": each["size"], "tags": "???"}
                 deduped_results.update(hashes)
 
     def has(self, request):
