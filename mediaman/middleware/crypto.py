@@ -1,9 +1,11 @@
 
 import functools
 import json
+import multiprocessing
 import os
 import subprocess
 import tempfile
+import threading
 
 from mediaman import config
 from mediaman.core import logtools
@@ -97,19 +99,26 @@ def decrypt(source, destination, keypath, cipher, digest):
 
 
 def decrypt_stream(source, keypath, cipher, digest):
-    import threading
 
-    def pump_input(pipe, source):
-        # https://stackoverflow.com/questions/32322034/writing-large-amount-of-data-to-stdin
+    def source_to_queue(source, queue):
+        for bytez in source:
+            logger.info(f"[v] Data in ({len(bytez)}B)")
+            queue.put(bytez)
+            logger.info(f"[v] Data queued")
+        queue.put(None)
+        logger.info(f"[v] Queue ended")
+
+    def queue_to_pipe(queue, pipe):
         with pipe:
-            for bytez in source:
+            while True:
+                bytez = queue.get(True)
+                if bytez is None:
+                    return
+                logger.info(f"[v] Data from queue ({len(bytez)}B)")
                 pipe.write(bytez)
+                logger.info(f"[v] Data piped")
                 pipe.flush()
-
-    def deal_with_stdout(process, sink):
-        for bytez in process.stdout:
-            sink.write(bytez)
-            sink.flush()
+                logger.info(f"[v] Data flushed")
 
     args = [
         "openssl", "enc", "-d",
@@ -120,31 +129,23 @@ def decrypt_stream(source, keypath, cipher, digest):
 
     logger.info(f"Decrypting stream...")
     try:
+        q = multiprocessing.Queue()
+
         process = subprocess.Popen(
             args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, env=form_subprocess_environ())
 
-        # threading.Thread(target=deal_with_stdout, args=[process, sink]).start()
-        # for bytez in source:
-        #     process.stdin.write(bytez)
-        #     process.stdin.flush()
+        threading.Thread(target=source_to_queue, args=[source, q]).start()
+        threading.Thread(target=queue_to_pipe, args=[q, process.stdin]).start()
 
-        threading.Thread(target=pump_input, args=[process.stdin, source]).start()
-        # import sys
-        # sink = sys.stdout.buffer
-        # for bytez in process.stdout:
-        #    # sink.write(bytez)
-        #    # sink.flush()
         while True:
-            bytez = process.stdout.read()
-            # logger.debug(bytez)
+            bytez = process.stdout.read(10_000_000)
             if not bytez:
                 return
+            logger.info(f"[^] Data read ({len(bytez)}B)")
             yield bytez
-        # for bytez in process.stdout:
-        #     logger.debug(bytez)
-        #     yield bytez
-        # yield from process.stdout
+            logger.info(f"[^] Data yielded")
+
     except subprocess.CalledProcessError as exc:
         err_text = exc.stderr.decode("utf-8")
 
@@ -307,6 +308,9 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
         stream = self.service.stream(temp_request)
 
         return decrypt_stream(stream, keypath, cipher, digest)
+        # for chunk in stream:
+        #     decrypted_chunk = b''.join(decrypt_stream(chunk, cipher, digest))
+        #     yield decrypted_chunk
 
     def stream_range(self, request, offset, length):
         if request.id not in self.metadata["data"]:

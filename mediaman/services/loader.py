@@ -16,9 +16,15 @@ def load_drive(config):
     return driveservice.DriveService(config)
 
 
+def load_onedrive(config):
+    from mediaman.services.onedrive import service as onedriveservice
+    return onedriveservice.OneDriveService(config)
+
+
 class ServiceType(enum.Enum):
     FOLDER = "folder"
     GOOGLE_DRIVE = "google drive"
+    MICROSOFT_ONEDRIVE = "microsoft onedrive"
     DROPBOX = "dropbox"
     AWS_S3 = "aws s3"
     AWS_GLACIER = "aws glacier"
@@ -27,6 +33,7 @@ class ServiceType(enum.Enum):
 SERVICE_TYPE_TO_LOADER = {
     ServiceType.FOLDER: load_local,
     ServiceType.GOOGLE_DRIVE: load_drive,
+    ServiceType.MICROSOFT_ONEDRIVE: load_onedrive,
 }
 
 

@@ -16,6 +16,11 @@ DRIVE_DESCRIPTION = f"""\
 Can even back up to a specific folder within Google Drive.
 Configurable in the config.yaml file."""
 
+ONEDRIVE_DESCRIPTION = f"""\
+[{ServiceType.MICROSOFT_ONEDRIVE.value}] -- Allows you to back up files to Microsoft OneDrive (requires OneDrive credentials).
+Can even back up to a specific folder within Microsoft OneDrive.
+Configurable in the config.yaml file."""
+
 DROPBOX_DESCRIPTION = f"""\
 [{ServiceType.DROPBOX.value}] -- Allows you to back up files to Dropbox.
 Can even back up to a specific folder within Dropbox.
@@ -35,6 +40,7 @@ Configurable in the config.yaml file."""
 SERVICE_TYPE_TO_DESCRIPTION = {
     ServiceType.FOLDER: LOCAL_DESCRIPTION,
     ServiceType.GOOGLE_DRIVE: DRIVE_DESCRIPTION,
+    ServiceType.MICROSOFT_ONEDRIVE: ONEDRIVE_DESCRIPTION,
     ServiceType.DROPBOX: DROPBOX_DESCRIPTION,
     ServiceType.AWS_S3: AWS_S3_DESCRIPTION,
     ServiceType.AWS_GLACIER: AWS_GLACIER_DESCRIPTION,

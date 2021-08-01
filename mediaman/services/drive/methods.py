@@ -22,13 +22,14 @@ OAUTH2_SCOPE = "https://www.googleapis.com/auth/drive"
 
 
 def ensure_directory(drive, destination):
-    logger.debug("[ ] Ensuring Google Drive destination...")
+    logger.info("[ ] Ensuring Google Drive destination...")
 
     if not destination:
         # TODO: use logging library
-        logger.debug("[+] No directory specified.  Using top-level directory.")
+        logger.info("[+] No directory specified.  Using top-level directory.")
         return None
 
+    logger.info(f"[N] Searching for destination: {destination}")
     folders = drive.files().list(
         q=f"title='{destination}' and mimeType='application/vnd.google-apps.folder'",
         fields="items(id)",
@@ -37,7 +38,7 @@ def ensure_directory(drive, destination):
     if folders:
         assert len(folders) == 1
         folder_id = folders[0]["id"]
-        logger.debug(f"[+] Directory found ({folder_id}).")
+        logger.info(f"[+] Directory found ({folder_id}).")
         return folder_id
 
     metadata = {
@@ -49,13 +50,14 @@ def ensure_directory(drive, destination):
         fields='id',
     ).execute()
     folder_id = folder["id"]
-    logger.debug(f"[+] Directory created ({folder_id}).")
+    logger.info(f"[+] Directory created ({folder_id}).")
 
     return folder["id"]
 
 
 def authenticate(client_secrets, credentials_path):
     assert client_secrets or credentials_path
+    logger.info("[ ] Checking for credentials")
 
     credentials = None
     if credentials_path:
@@ -75,9 +77,11 @@ def authenticate(client_secrets, credentials_path):
         storage.put(credentials)
 
     # Create an authorized Drive API client.
+    logger.info("[N] Authorizing Drive client...")
     http = httplib2.Http()
     credentials.authorize(http)
     service = apiclient.discovery.build("drive", "v2", http=http)
+    logger.info("[N] Authorized Drive client.")
     return service
 
 
@@ -100,6 +104,7 @@ def list_files(drive, folder_id=None):
             if page_token:
                 param['pageToken'] = page_token
 
+            logger.info(f"[N] Listing files...")
             files = drive.files().list(**param).execute()
 
             result.extend(files['items'])
@@ -110,16 +115,18 @@ def list_files(drive, folder_id=None):
         except Exception as error:
             print('An error occurred: %s' % error)
 
-    logger.debug(len(result))
+    logger.info(len(result))
     return {"items": result}
 
 
 def list_file(drive, file_id):
+    logger.info(f"[N] Listing file {file_id}...")
     return drive.files().get(fileId=file_id).execute()
 
 
 def exists(drive, file_id, folder_id=None):
     # TODO: use folder_id param
+    logger.info(f"[ ] Checking if file exists")
     try:
         list_file(drive, file_id)
         return True
@@ -150,25 +157,30 @@ def upload(drive, request, folder_id=None):
         body["parents"] = [{"id": folder_id}]
 
     # Decide whether to create or update.
+    logger.info(f"[ ] Checking if file exists")
     files = search_by_name(drive, request.id, folder_id=folder_id)["items"]
 
     if len(files) == 1:
         file_id = files[0]["id"]
+        logger.info(f"[ ] Updating file")
         return upload_update(drive, body, media_body, file_id, folder_id=folder_id)
 
     if len(files) > 1:
         logger.warning("[!] Warning: multiple files exist with this name ({request.id})!  Can't safely replace one!")
 
+    logger.info(f"[ ] Creating file")
     return upload_create(drive, body, media_body, folder_id=folder_id)
 
 
 def upload_create(drive, body, media_body, folder_id=None):
     # Perform the request and return the result.
+    logger.info(f"[N] Creating Drive file")
     receipt = drive.files().insert(body=body, media_body=media_body).execute()
     return receipt
 
 
 def upload_update(drive, body, media_body, file_id, folder_id=None):
+    logger.info(f"[N] Updating Drive file")
     receipt = drive.files().update(
         newRevision=False,
         fileId=file_id,
@@ -191,10 +203,10 @@ def download(drive, request, folder_id=None):
             raise
 
         if download_progress:
-            logger.debug(f"[ ] Downloading... {download_progress.progress():.2%}")
+            logger.info(f"[ ] Downloading... {download_progress.progress():.2%}")
 
         if done:
-            logger.debug("[+] Download complete.")
+            logger.info("[+] Download complete.")
             break
 
     return {
@@ -231,10 +243,10 @@ def stream(drive, request, folder_id=None):
             raise
 
         if download_progress:
-            logger.debug(f"[ ] Downloading... {download_progress.progress():.2%}")
+            logger.info(f"[ ] Downloading... {download_progress.progress():.2%}")
 
         if done:
-            logger.debug("[+] Download complete.")
+            logger.info("[+] Download complete.")
             break
 
 
@@ -244,6 +256,7 @@ def stream_range(drive, request, folder_id=None, offset=0, length=0):
     http_request = drive.files().get_media(fileId=request.id)
     media_request = apiclient.http.MediaIoBaseDownload(memory_fd, http_request, start=offset, chunksize=max(65536, length))
 
+    logger.info(f"[N] Requested: offset={offset}, length={length}")
     with open("mmlog.txt", "a") as outfile:
         outfile.write(f"\nRequested: offset={offset}, length={length}\n")
         outfile.flush()
@@ -260,11 +273,12 @@ def stream_range(drive, request, folder_id=None, offset=0, length=0):
             raise
 
         if download_progress:
-            logger.debug(f"[ ] Downloading... {download_progress.progress():.2%}")
+            logger.info(f"[ ] Downloading... {download_progress.progress():.2%}")
             remaining = length
             abs_read = (download_progress.resumable_progress - 1)
             rel_read = (abs_read - offset)
             if rel_read < remaining:
+                logger.info(f"[N] abs_read={abs_read}, rel_read={rel_read}, remaining={remaining}")
                 with open("mmlog.txt", "a") as outfile:
                     outfile.write(f"abs_read={abs_read}\n")
                     outfile.write(f"rel_read={rel_read}\n")
@@ -274,6 +288,7 @@ def stream_range(drive, request, folder_id=None, offset=0, length=0):
                 yield data
                 remaining -= len(data)
             else:
+                logger.info(f"[N] abs_read={abs_read}, rel_read={rel_read}, remaining={remaining}")
                 with open("mmlog.txt", "a") as outfile:
                     outfile.write(f"abs_read={abs_read}\n")
                     outfile.write(f"rel_read={rel_read}\n")
@@ -284,11 +299,12 @@ def stream_range(drive, request, folder_id=None, offset=0, length=0):
                 return
 
         if done:
-            logger.debug("[+] Download complete.")
+            logger.info("[+] Download complete.")
             break
 
 
 def search_by_name(drive, file_name, folder_id=None):
+    logger.info(f"[N] Searching for file by name: {file_name}")
     if folder_id:
         request = drive.files().list(
             q=f"title='{file_name}' and '{folder_id}' in parents",
@@ -305,6 +321,7 @@ def search_by_name(drive, file_name, folder_id=None):
 
 
 def capacity(drive, quota, folder_id=None):
+    logger.info("[N] Checking capacity")
     capacity_info = drive.about().get().execute()
     used = int(capacity_info.get("quotaBytesUsed"))
     total = int(capacity_info.get("quotaBytesTotal"))

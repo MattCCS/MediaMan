@@ -37,6 +37,7 @@ class Policy:
     def __init__(self):
         self.nickname_to_config = {}
         self.nickname_to_service = {}
+        self.nickname_to_client = {}
         self.load_service_configs()
 
     def load_service_configs(self):
@@ -81,13 +82,17 @@ class Policy:
             logger.warn(f"Failed to load some services: {', '.join(failures)}")
 
     def load_client(self, service_selector):
+        if service_selector in self.nickname_to_client:
+            return self.nickname_to_client[service_selector]
         if service_selector is None:
-            return loader.load_global_client(self.load_all_services())
+            client = loader.load_global_client(self.load_all_services())
         elif service_selector == SERVICE_NICKNAME_ALL:
-            return loader.load_multi_client(self.load_all_services())
+            client = loader.load_multi_client(self.load_all_services())
         else:
             service_name = service_selector
-            return loader.load_single_client(self.load_service(service_name))
+            client = loader.load_single_client(self.load_service(service_name))
+        self.nickname_to_client[service_selector] = client
+        return client
 
     def get_config(self, service_selector=None):
         if not service_selector or service_selector == SERVICE_NICKNAME_ALL:
