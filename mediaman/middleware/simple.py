@@ -61,3 +61,6 @@ class SimpleMiddleware(abstract.AbstractMiddleware):
     @init
     def tag(self, request, *args, **kwargs):
         return self.service.tag(request, *args, **kwargs)
+
+    def migrate_to_v2(self):
+        raise NotImplementedError()

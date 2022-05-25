@@ -543,3 +543,180 @@ class Index(base.BaseIndex):
         self.update_metadata()
 
         return updated_files
+
+    def migrate_to_v2(self):
+        logger.debug("Running `migrate_to_v2`")
+        try:
+            mlist_file = self.service.search_by_name("mlist").results()[0]
+            raise RuntimeError("`mlist` file already exists.")
+        except IndexError:
+            pass
+
+        current_files = self.service.list_files().results()
+        index_file = self.service.search_by_name("index").results()[0]
+        crypt_file = self.service.search_by_name("crypt").results()[0]
+
+        index_file_sid = index_file.id()
+        crypt_file_sid = crypt_file.id()
+
+        with tempfile.NamedTemporaryFile("w+", delete=True) as tempfile_ref:
+            request = models.Request(
+                id=index_file_sid,
+                path=tempfile_ref.name,
+            )
+
+            self.service.download(request)
+            tempfile_ref.seek(0)
+
+            index_data = json.loads(tempfile_ref.read())
+
+        with tempfile.NamedTemporaryFile("w+", delete=True) as tempfile_ref:
+            request = models.Request(
+                id=crypt_file_sid,
+                path=tempfile_ref.name,
+            )
+
+            self.service.download(request)
+            tempfile_ref.seek(0)
+
+            crypt_data = json.loads(tempfile_ref.read())
+
+        file_sids = set(f.id() for f in current_files)
+        data_file_sids = file_sids - set([index_file_sid, crypt_file_sid])
+        assert len(data_file_sids) == (len(file_sids) - 2)
+
+        crypt_sids = set(crypt_data["data"])
+        index_sids = set(f["sid"] for f in index_data["files"].values())
+        index_sid_map = {f["sid"]: f for f in index_data["files"].values()}
+
+        files_that_exist_and_are_tracked = data_file_sids & index_sids
+
+        new_entries = []
+        for tracked_sid in files_that_exist_and_are_tracked:
+            new_entry = dict(index_sid_map[tracked_sid])
+            new_entry["hashes"] = list(set(new_entry["hashes"] + new_entry.pop("merged_hashes")))
+            new_entry["encryption"] = crypt_data["data"].get(tracked_sid)  # or None, if not encrypted
+
+            new_entries.append(new_entry)
+
+        files = new_entries
+
+        def chunks(lst, n):
+            """Yield successive n-sized chunks from lst."""
+            for i in range(0, len(lst), n):
+                yield lst[i:i + n]
+
+        new_index_file_lists = list(chunks(files, 250))
+        new_indices = [
+            {
+                "version": 5,
+                "files": nifl,
+            }
+            for nifl in new_index_file_lists
+        ]
+
+        new_indices_tracked = []
+        for new_index in new_indices:
+            with tempfile.NamedTemporaryFile("w+", delete=True) as tempfile_ref:
+                tempfile_ref.write(json.dumps(new_index))
+                tempfile_ref.seek(0)
+
+                new_index_id = f"{Index.INDEX_FILENAME}-{uuid.uuid4()}"
+                request = models.Request(
+                    id=new_index_id,
+                    path=tempfile_ref.name,
+                )
+                print(request)
+                receipt = self.service.upload(request)
+                new_index_tracked = {
+                    "id": new_index_id,
+                    "sid": receipt.id(),
+                    "encryption": {"cipher": "aes-256-cbc", "digest": "sha256"},
+                }
+                new_indices_tracked.append(new_index_tracked)
+
+        mlist = {
+            "version": 5,
+            "data": {
+                "indices": new_indices_tracked,
+            }
+        }
+
+        with tempfile.NamedTemporaryFile("w+", delete=True) as tempfile_ref:
+            tempfile_ref.write(json.dumps(mlist))
+            tempfile_ref.seek(0)
+
+            MLIST_FILENAME = "mlist"
+            request = models.Request(
+                id=MLIST_FILENAME,
+                path=tempfile_ref.name,
+            )
+            print(request)
+            receipt = self.service.service.upload(request)  # TODO: specifically avoid encrypting
+
+        MLIST_x = {
+            "version": 5,
+            "data": {
+                "indices": [
+                    {
+                        "id": "index-7397c657-902e-4e39-989b-d856e67319eb",
+                        "sid": "Ahi1bkjxiu1-9df81ghu13",
+                    }
+                ],
+            },
+        }
+
+        # ex:
+        MLIST_e = {
+            "version": 5,
+            "encryption": {"cipher": "aes-256-cbc", "digest": "sha256", "key-sig": "sha256:8a74dbc738563fe2..."},
+            "data": "dGVzdCB...kYXRhMTI=",
+        }
+
+        MLIST = {
+            "version": 5,
+            "encryption": None,
+            "data": {
+                "indices": [
+                    {
+                        "id": "index-7397c657-902e-4e39-989b-d856e67319eb",
+                        "sid": "Ahi1bkjxiu1-9df81ghu13",
+                        "encryption": {
+                            "cipher": "aes-256-cbc",
+                            "digest": "sha256", "key-sig": "sha256:8a74dbc738563fe2...",
+                        },
+                        "compression": True,
+                    },
+                    {"id": "index-2f396176-ffa6-4883-b779-85d77366a750", "sid": "sg9aua0fd8oij1df38g187", "encryption": {"cipher": "aes-256-cbc", "digest": "sha256", "key-sig": "sha256:8a74dbc738563fe2..."}},
+                    {"id": "index-f1330256-040c-4852-bbf7-5f5565ec2294", "sid": "afdy1aa39dfhsf8ghdgasf", "encryption": {"cipher": "aes-256-cbc", "digest": "sha256", "key-sig": "sha256:8a74dbc738563fe2..."}},
+                ],
+            },
+        }
+
+        INDEX_7397 = {
+            "version": 5,
+            "files": [
+                {
+                    "public": {
+                        "id": "75c9a08d-6c76-4123-9a7f-7c5cd1232ceb",
+                        "sid": "1xrPgeCEl7ncyJv1TLdRIHiqyacfNoWN1",
+                        "encryption": {"cipher": "aes-256-cbc", "digest": "sha256"},
+                    },
+                    "private": {
+                        "name": "Everybody Rise.mp3",
+                        "size": 691493,
+                        "hashes": ["xxh64:ed496289a15cd4cf"],
+                        "tags": [],
+                    },
+                },
+                {
+                    "id": "75c9a08d-6c76-4123-9a7f-7c5cd1232ceb",
+                    "name": "Everybody Rise.mp3",
+                    "sid": "1xrPgeCE7ncyJv1TLdRIHiqyacfNoWN1",
+                    "size": 691493,
+                    "hashes": ["xxh64:ed496289a15cd4ce"],
+                    "tags": [],
+                    "encryption": {"cipher": "aes-256-cbc", "digest": "sha256"},
+                },
+            ],
+        }

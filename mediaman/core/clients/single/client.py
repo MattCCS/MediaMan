@@ -66,3 +66,6 @@ class SingleClient(abstract.AbstractSingleClient):
 
     def tag(self, requests=None, add=None, remove=None, set=None):
         return self.index.tag(requests=requests, add=add, remove=remove, set=set)
+
+    def migrate_to_v2(self):
+        return self.index.migrate_to_v2()

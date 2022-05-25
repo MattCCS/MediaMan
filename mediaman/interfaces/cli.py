@@ -74,6 +74,8 @@ class Action(enum.Enum):
     SEARCH_BY_HASH = "search-by-hash"
     TAG = "tag"
 
+    MIGRATE_TO_V2 = "migrate-to-v2"  # TODO: temporary command
+
 
 ACTIONS = frozenset(action.value for action in Action)
 
@@ -184,6 +186,7 @@ def add_commands(subparsers, service=None):
     add_parser(Action.REFRESH.value, description=f"[{service}] -- {REFRESH_TEXT_SERVICE}" if service else REFRESH_TEXT)
     p_search_by_hash = add_parser(Action.SEARCH_BY_HASH.value, description=f"[{service}] -- {SEARCH_BY_HASH_TEXT_SERVICE}" if service else SEARCH_BY_HASH_TEXT)
     p_tag = add_parser(Action.TAG.value, description=f"[{service}] -- {TAG_TEXT_SERVICE}" if service else TAG_TEXT)
+    p_migrate_to_v2 = add_parser(Action.MIGRATE_TO_V2.value, description=f"[{service}] -- migrate to v2")
 
     for parser in [p_stream, p_streamrange]:
         parser.add_argument("file")
@@ -404,6 +407,8 @@ def main():
             results = [results]
         for result in results:
             print(result)
+    elif args.action == Action.MIGRATE_TO_V2.value:
+        api.run_migrate_to_v2(service_selector=service_selector)
     else:
         raise NotImplementedError()
 

@@ -87,3 +87,6 @@ class BaseMultiIndex(abstract.AbstractMultiIndex):
                 requests.append(request)
 
         return self.client.tag(requests=requests, add=add, remove=remove, set=set)
+
+    def migrate_to_v2(self):
+        return self.client.migrate_to_v2()

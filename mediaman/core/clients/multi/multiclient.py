@@ -60,3 +60,6 @@ class Multiclient(abstract.AbstractMulticlient):
 
     def tag(self, *args, **kwargs):
         return gen_all(methods.tag(self.clients, *args, **kwargs))
+
+    def migrate_to_v2(self):
+        raise RuntimeError()  # `mm all migrate_to_v2` isn't allowed

@@ -99,6 +99,7 @@ def launch_editor():
         print(f"[?] Would you like the file to be [B]lank, or to start from a [T]emplate?")
         choice = input(f"    [B/T/n] ")
 
+        pathlib.Path(CONFIGURATION_PATH).parent.mkdir(parents=True, exist_ok=True)
         if choice == "B":
             pathlib.Path(CONFIGURATION_PATH).touch(mode=0o600, exist_ok=True)
         elif choice == "T":

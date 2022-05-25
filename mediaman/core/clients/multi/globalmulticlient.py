@@ -347,3 +347,6 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
 
     def tag(self, *args, **kwargs):
         raise NotImplementedError()  # `mm tag` is not allowed (yet)
+
+    def migrate_to_v2(self):
+        raise NotImplementedError()  # `mm migrate_to_v2` is not allowed

@@ -82,3 +82,8 @@ class AbstractClient(abc.ABC):
     def tag(self, requests=None, add=None, remove=None, set=None) -> models.AbstractResultFileList:
         """Tag the file(s) described by the given request(s)"""
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def migrate_to_v2(self):
+        """TODO"""
+        raise NotImplementedError()
