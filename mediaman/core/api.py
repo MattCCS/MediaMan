@@ -96,5 +96,6 @@ def run_search_by_hash(*identifiers, service_selector=None):
 def run_tag(root, identifiers, add, remove, set, service_selector=None):
     return policy.load_client(service_selector=service_selector).tag(root, identifiers=identifiers, add=add, remove=remove, set=set)
 
+
 def run_migrate_to_v2(service_selector=None):
     return policy.load_client(service_selector=service_selector).migrate_to_v2()

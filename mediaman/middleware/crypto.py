@@ -13,15 +13,6 @@ from mediaman.middleware import simple
 
 logger = logtools.new_logger(__name__)
 
-
-def init(func):
-    @functools.wraps(func)
-    def wrapped(self, *args, **kwargs):
-        self.init_metadata()
-        return func(self, *args, **kwargs)
-    return wrapped
-
-
 # <openssl> enc -<e/d> -<cipher> -kfile <keypath> -md <digest> -in <inpath> -out <outpath>
 DEFAULT_CIPHER = "aes-256-cbc"
 DEFAULT_DIGEST = "sha256"
@@ -170,33 +161,28 @@ def create_metadata(data=None):
 
 class EncryptionMiddlewareService(simple.SimpleMiddleware):
 
-    MIDDLEWARE_FILENAME = "crypt"
-
     def __init__(self, service):
         super().__init__(service)
         logger.info(f"EncryptionMiddlewareService init for {service}")
 
-        self.metadata_id = None
-        self.metadata = None
+    # def init_metadata(self):
+    #     if self.metadata is not None:
+    #         return
 
-    def init_metadata(self):
-        if self.metadata is not None:
-            return
+    #     # TODO: implement
+    #     file_list = self.service.search_by_name(EncryptionMiddlewareService.MIDDLEWARE_FILENAME)
+    #     files = file_list.results()
 
-        # TODO: implement
-        file_list = self.service.search_by_name(EncryptionMiddlewareService.MIDDLEWARE_FILENAME)
-        files = file_list.results()
+    #     if len(files) > 1:
+    #         raise RuntimeError(ERROR_MULTIPLE_REMOTE_FILES.format(self.service))
 
-        if len(files) > 1:
-            raise RuntimeError(ERROR_MULTIPLE_REMOTE_FILES.format(self.service))
-
-        if not files:
-            logger.debug(f"creating metadata")
-            self.metadata = create_metadata()
-            self.update_metadata()
-        else:
-            logger.debug(f"loading metadata")
-            self.load_metadata(files[0])
+    #     if not files:
+    #         logger.debug(f"creating metadata")
+    #         self.metadata = create_metadata()
+    #         self.update_metadata()
+    #     else:
+    #         logger.debug(f"loading metadata")
+    #         self.load_metadata(files[0])
 
     def update_metadata(self):
         with tempfile.NamedTemporaryFile("w+", delete=True) as tempfile_ref:
@@ -251,16 +237,14 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
         self.track_cipher(receipt.id(), cipher, digest)  # IMPORTANT -- must track by sid!
         return receipt
 
-    def download(self, request):
-        if request.id not in self.metadata["data"]:
+    def download(self, request, encryption):
+        if encryption is None:
             logger.info(f"Downloading unencrypted file: {request}")
             return self.service.download(request)
 
-        params = self.metadata["data"][request.id]
-
         keypath = KEYPATH
-        cipher = params["cipher"]
-        digest = params["digest"]
+        cipher = encryption["cipher"]
+        digest = encryption["digest"]
 
         logger.info(f"Downloading encrypted file: {request}")
         with tempfile.NamedTemporaryFile("wb+", delete=True) as tempfile_ref:
@@ -276,8 +260,8 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
 
         return receipt
 
-    def stream(self, request):
-        if request.id not in self.metadata["data"]:
+    def stream(self, request, encryption):
+        if encryption is None:
             logger.info(f"Streaming unencrypted file: {request}")
             return self.service.stream(request)
 
@@ -285,11 +269,9 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
         # if request.id not in TEST_SESH:
         #     TEST_SESH[request.id] = {"ebuff": None, "pbuff": None}
 
-        params = self.metadata["data"][request.id]
-
         keypath = KEYPATH
-        cipher = params["cipher"]
-        digest = params["digest"]
+        cipher = encryption["cipher"]
+        digest = encryption["digest"]
 
         logger.info(f"Streaming encrypted file: {request}")
         temp_request = models.Request(
@@ -300,8 +282,8 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
 
         return decrypt_stream(stream, keypath, cipher, digest)
 
-    def stream_range(self, request, offset, length):
-        if request.id not in self.metadata["data"]:
+    def stream_range(self, request, offset, length, encryption):
+        if encryption is None:
             logger.info(f"Streaming unencrypted file: {request}")
             return self.service.stream_range(request, offset, length)
 
@@ -311,16 +293,13 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
         )
 
         if offset < 16:
-            # raise RuntimeError("Not supported!")
-            return self.stream_range_continuous(temp_request, offset, length)
-        return self.stream_range_discontinuous(temp_request, offset, length)
+            return self.stream_range_continuous(temp_request, offset, length, encryption=encryption)
+        return self.stream_range_discontinuous(temp_request, offset, length, encryption=encryption)
 
-    def stream_range_continuous(self, request, offset, length):
-        params = self.metadata["data"][request.id]
-
+    def stream_range_continuous(self, request, offset, length, encryption):
         keypath = KEYPATH
-        cipher = params["cipher"]
-        digest = params["digest"]
+        cipher = encryption["cipher"]
+        digest = encryption["digest"]
 
         import math
         BLOCK_SIZE = 16
@@ -351,12 +330,10 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
             yield bytez
             remaining -= len(bytez)
 
-    def stream_range_discontinuous(self, request, offset, length):
-        params = self.metadata["data"][request.id]
-
+    def stream_range_discontinuous(self, request, offset, length, encryption):
         keypath = KEYPATH
-        cipher = params["cipher"]
-        digest = params["digest"]
+        cipher = encryption["cipher"]
+        digest = encryption["digest"]
 
         import itertools
         import math
