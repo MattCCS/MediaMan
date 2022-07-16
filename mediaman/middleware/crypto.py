@@ -219,22 +219,21 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
 
         # TODO: some sane way for crypto to manage metadata version (or just combine the files...?)
 
-    def track_cipher(self, key, cipher, digest):
-        global CIPHER
-        self.metadata["data"][key] = {"cipher": cipher, "digest": digest}
-        self.update_metadata()
+    def upload(self, request, encryption):
+        if encryption is None:
+            logger.info(f"Uploading unencrypted file: {request}")
+            return self.service.upload(request)
 
-    def upload(self, request):
         # TODO: remove metadata when file is deleted
         keypath = KEYPATH
-        cipher = DEFAULT_CIPHER
-        digest = DEFAULT_DIGEST
+        cipher = encryption["cipher"]
+        digest = encryption["digest"]
 
+        logger.info(f"Uploading encrypted file: {request}")
         with encrypt(request, keypath, cipher, digest) as encrypted_tempfile:
             request.path = encrypted_tempfile.name
             receipt = self.service.upload(request)
 
-        self.track_cipher(receipt.id(), cipher, digest)  # IMPORTANT -- must track by sid!
         return receipt
 
     def download(self, request, encryption):

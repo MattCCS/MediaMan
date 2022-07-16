@@ -15,6 +15,7 @@ from mediaman.core import models
 from mediaman.core import settings
 from mediaman.core.index import base
 from mediaman.core.index import migration
+from mediaman.services.abstract import models as abstractmodels
 
 logger = logtools.new_logger(__name__)
 
@@ -22,6 +23,8 @@ logger = logtools.new_logger(__name__)
 ERROR_MULTIPLE_REMOTE_FILES = "\
 [!] Multiple {} files found for service ({})!  \
 This must be resolved manually.  Exiting..."
+
+DEFAULT_ENCRYPTION = {"cipher": "aes-256-cbc", "digest": "sha256"}
 
 
 def init(func):
@@ -41,7 +44,7 @@ def make_temp_directory():
         shutil.rmtree(temp_dir)
 
 
-def create_file(id, name, sid, size, hashes, tags):
+def create_file(id, name, sid, size, hashes, tags, encryption=DEFAULT_ENCRYPTION):
     assert isinstance(size, int)
     assert isinstance(hashes, list)
     assert isinstance(tags, list)
@@ -52,16 +55,31 @@ def create_file(id, name, sid, size, hashes, tags):
         "size": size,
         "hashes": hashes,
         "tags": tags,
-        "encryption": {"cipher": "aes-256-cbc", "digest": "sha256"},
+        "encryption": encryption,
     }
 
 
-def create_metadata():
+def create_mlist_file():
     return {
         "version": settings.VERSION,
         "data": {
             "indices": [],
         },
+    }
+
+
+def create_mlist_index_file_entry(id, sid, encryption=DEFAULT_ENCRYPTION):
+    return {
+        "id": id,
+        "sid": sid,
+        "encryption": encryption,
+    }
+
+
+def create_index_file():
+    return {
+        "version": settings.VERSION,
+        "files": [],
     }
 
 
@@ -78,7 +96,7 @@ def get_one_file_by_name(service, filename) -> typing.Optional[dict]:
     return files[0] if files else None
 
 
-def temporary(bytez):
+def temporary(bytez) -> tempfile.NamedTemporaryFile:
     tempfile_ref = tempfile.NamedTemporaryFile("w+", delete=True)
     tempfile_ref.write(bytez)
     tempfile_ref.seek(0)
@@ -100,8 +118,13 @@ class Index(base.BaseIndex):
         self.id_to_metadata_map = {}  # {id/UUID -> str(int)}
         self.hash_to_metadata_map = {}  # {hash -> str(int)}
 
-    def _downloaded(self, file_sid, encryption):
-        logger.debug(f"Downloading file with sid {file_sid}")
+        self.mlist = {}  # <mlist>
+        self.indices = {}  # {index-UUID -> {<file>, ...}}
+
+        self.file_to_index_map = {}  # {file-UUID -> index-UUID}
+
+    def _downloaded(self, file_sid, encryption):  # -> tempfile_ref
+        logger.debug(f"Downloading file with {file_sid=}")
         tempfile_ref = tempfile.NamedTemporaryFile("w+", delete=True)
         request = models.Request(
             id=file_sid,
@@ -110,6 +133,19 @@ class Index(base.BaseIndex):
         self.service.download(request, encryption=encryption)
         tempfile_ref.seek(0)
         return tempfile_ref
+
+    def _upload(self, filepath, file_id, encryption):  # -> AbstractReceiptFile
+        upload_request = models.Request(
+            id=file_id,
+            path=filepath,
+        )
+        logger.debug(f"Uploading {filepath=} as {upload_request=} ...")
+        receipt = self.service.upload(upload_request, encryption=encryption)
+        return receipt
+
+    def _upload_bytes(self, bytez, file_id, encryption):  # -> AbstractReceiptFile
+        with temporary(bytez) as tempfile_ref:
+            return self._upload(filepath=tempfile_ref.name, file_id=file_id, encryption=encryption)
 
     def _resolve_identifier_to_file_metadata(self, identifier) -> typing.Union[None, typing.Literal[False], dict]:
         if self.has_uuid(identifier):
@@ -142,19 +178,16 @@ class Index(base.BaseIndex):
 
         if not mlist_file:
             logger.debug(f"Creating metadata")
-            self.metadata = create_metadata()
+            self.metadata = create_mlist_file()
             self.update_metadata()
         else:
             logger.debug(f"Loading metadata")
             self.load_metadata(mlist_file)
 
     def update_metadata(self):
-        with temporary(json.dumps(self.metadata)) as tempfile_ref:
-            request = models.Request(
-                id=Index.INDEX_FILENAME,
-                path=tempfile_ref.name,
-            )
-            receipt = self.service.upload(request)
+        raise NotImplementedError()
+        # TODO(mcotton): refactor this to understand mlist + multiple index files
+        # self._upload_bytes(json.dumps(self.mlist), file_id=Index.MLIST_FILENAME, encryption=None)
 
         logger.debug(f"update_metadata receipt: {receipt}")
         self.index_id = receipt.id()
@@ -170,6 +203,7 @@ class Index(base.BaseIndex):
     def load_metadata(self, mlist_file):
         logger.trace(f"Loading metadata: {mlist_file}")
         mlist_data = self.load_metadata_json(mlist_file)
+        self.mlist = mlist_data
         logger.trace(f"Loaded mlist_data: {mlist_data}")
 
         if "version" not in mlist_data:
@@ -188,15 +222,19 @@ class Index(base.BaseIndex):
         # Download and cache multiple indices
         self.metadata = {"files": {}}
         for index_envelope in mlist_data["data"]["indices"]:
+            index_id = index_envelope["id"]
             index_sid = index_envelope["sid"]
             index_encryption = index_envelope["encryption"]
             with self._downloaded(index_sid, encryption=index_encryption) as tempfile_ref:
                 index_data = json.loads(tempfile_ref.read())
-                self._load_index_data(index_data)
+                self.indices[index_id] = index_data
+                self._load_index_data(index_data, index_id)
 
         logger.trace(f"Metadata loaded: {self.metadata}")
+        logger.trace(f"Indices loaded: {self.indices=}")
+        logger.trace(f"File -> index map: {self.file_to_index_map=}")
 
-    def _load_index_data(self, index_data):
+    def _load_index_data(self, index_data, index_id):
         logger.trace(f"Loading {index_data=}")
         files = index_data["files"]
         for f in files:
@@ -209,11 +247,12 @@ class Index(base.BaseIndex):
             self.latest_file_index += 1
             # self.id_to_metadata_map.update(**{f["id"]: f for f in files})
             # self.hash_to_metadata_map.update(**{hash: f for f in files for hash in f["hashes"]})
+            self.file_to_index_map[f["id"]] = index_id
 
     @init
     def new_id(self):
         id = str(uuid.uuid4())
-        while id in self.id_to_metadata_map:
+        while id in self.id_to_metadata_map or id in self.indices:
             id = str(uuid.uuid4())
         return id
 
@@ -264,22 +303,18 @@ class Index(base.BaseIndex):
             logger.info(f"[-] (File already indexed: {request.path})")
             return self.get_metadata_by_hash(hash)
 
-        upload_request = models.Request(
-            id=self.new_id(),
-            path=request.path,
+        receipt = self._upload(
+            filepath=request.path,
+            file_id=(file_id := self.new_id()),
+            encryption=DEFAULT_ENCRYPTION,
         )
 
-        logger.info(f"Uploading '{request}' as '{upload_request}' ...")
-        receipt = self.service.upload(upload_request)
-
-        hashes = [hash]
-
         self.track_file(create_file(
-            id=upload_request.id,
+            id=file_id,
             name=name,
             sid=receipt.id(),
             size=size,
-            hashes=hashes,
+            hashes=[hash],
             tags=[],
         ))
 
@@ -295,13 +330,44 @@ class Index(base.BaseIndex):
         for hash in file["hashes"]:
             self.hash_to_metadata_map[hash] = new_index
 
-        self.update_metadata()
+        # Pick an index
+        most_recent_index_id = self.mlist["data"]["indices"][-1]["id"]
+        most_recent_index = self.indices[most_recent_index_id]
+
+        # TODO(mcotton): configurable cutoff? computed?
+        # if (should_create_new_index := True):
+        if (should_create_new_index := (len(most_recent_index["files"]) > 200)):
+            new_index_id = f"index-{self.new_id()}"
+            new_index = create_index_file()
+            target_index_id = new_index_id
+            target_index = new_index
+        else:
+            target_index_id = most_recent_index_id
+            target_index = most_recent_index
+
+        # Update the index (creating if necessary)
+        target_index["files"].append(file)
+        index_receipt = self._upload_bytes(bytez=json.dumps(target_index), file_id=target_index_id, encryption=DEFAULT_ENCRYPTION)
+        target_index_sid = index_receipt.id()
+        logger.debug(f"Wrote to {target_index_id=} with {target_index_sid=}")
+
+        # Update the mlist if necessary
+        if should_create_new_index:
+            new_mlist_index_entry = create_mlist_index_file_entry(
+                id=target_index_id,
+                sid=target_index_sid,
+                encryption=DEFAULT_ENCRYPTION,
+            )
+            self.mlist["data"]["indices"].append(new_mlist_index_entry)
+            mlist_receipt = self._upload_bytes(bytez=json.dumps(self.mlist), file_id=self.MLIST_FILENAME, encryption=None)
+            logger.debug(f"Wrote updated mlist with sid={mlist_receipt.id()} and new index {new_mlist_index_entry}")
+
 
     @init
     def download(self, root, identifier):
         logger.debug(f"Download request for: '{identifier}' to '{root}'...")
         if not (metadata := self._resolve_identifier_to_file_metadata(identifier)):
-            return metadata
+            return None
 
         logger.trace(f"Downloading file with metadata: {metadata}")
         encryption = metadata["encryption"]
@@ -309,7 +375,7 @@ class Index(base.BaseIndex):
             id=metadata["sid"],
             path=root / metadata["name"],
         )
-        return self.service.download(request, encryption=encryption)
+        return self.service.download(request, encryption=metadata["encryption"])
 
     @init
     def stream(self, root, identifier):
@@ -339,78 +405,78 @@ class Index(base.BaseIndex):
 
     def refresh(self):
         raise NotImplementedError()
-        raw_metadata = self.load_metadata_json(self.service.search_by_name("...").results()[0])
-        metadata = migration.repair_metadata(raw_metadata)
+        # raw_metadata = self.load_metadata_json(self.service.search_by_name("...").results()[0])
+        # metadata = migration.repair_metadata(raw_metadata)
 
-        print(f"Repaired metadata: {metadata}")
-        inp = input("Does everything look good? [Y/n] ")
-        if inp not in ('y', 'Y'):
-            print("Cancelled.")
-            return
+        # print(f"Repaired metadata: {metadata}")
+        # inp = input("Does everything look good? [Y/n] ")
+        # if inp not in ('y', 'Y'):
+        #     print("Cancelled.")
+        #     return
 
-        self.metadata = metadata
-        self.update_metadata()
+        # self.metadata = metadata
+        # self.update_metadata()
 
-        inp = input("Would you like to refresh the file list? [Y/n] ")
-        if inp in ('y', 'Y'):
-            logger.info(f"Old metadata: {raw_metadata}")
-            self.refresh_file_list(metadata)
+        # inp = input("Would you like to refresh the file list? [Y/n] ")
+        # if inp in ('y', 'Y'):
+        #     logger.info(f"Old metadata: {raw_metadata}")
+        #     self.refresh_file_list(metadata)
 
-        inp = input("Would you like to refresh the file hashes?  This may take a long time, but is useful when you have changed the preferred hash function. [Y/n]  ")
-        if inp in ('y', 'Y'):
-            self.refresh_hashes()
+        # inp = input("Would you like to refresh the file hashes?  This may take a long time, but is useful when you have changed the preferred hash function. [Y/n]  ")
+        # if inp in ('y', 'Y'):
+        #     self.refresh_hashes()
 
-        return
+        # return
 
     def refresh_file_list(self, metadata):
         raise NotImplementedError()
-        sid_to_metadata = {f["sid"]: f for f in metadata["files"].values()}
+        # sid_to_metadata = {f["sid"]: f for f in metadata["files"].values()}
 
-        current_files = self.service.list_files().results()
-        new_files = []
-        for current_file in current_files:
+        # current_files = self.service.list_files().results()
+        # new_files = []
+        # for current_file in current_files:
 
-            # NOTE: we're listing raw files!
-            sid = current_file.id()
-            id = current_file.name()
-            size = current_file.size()
-            logger.debug(f"current_file: {current_file}")
+        #     # NOTE: we're listing raw files!
+        #     sid = current_file.id()
+        #     id = current_file.name()
+        #     size = current_file.size()
+        #     logger.debug(f"current_file: {current_file}")
 
-            try:
-                file_metadata = sid_to_metadata[sid]
-            except KeyError:
-                # TODO: MUST HANDLE THIS!
-                # This will occur for "index", but also for
-                # new/lost files.  Have to track them sanely.
-                logger.warn(f"Couldn't find metadata for sid '{sid}': {current_file}")
-                continue
+        #     try:
+        #         file_metadata = sid_to_metadata[sid]
+        #     except KeyError:
+        #         # TODO: MUST HANDLE THIS!
+        #         # This will occur for "index", but also for
+        #         # new/lost files.  Have to track them sanely.
+        #         logger.warn(f"Couldn't find metadata for sid '{sid}': {current_file}")
+        #         continue
 
-            name = file_metadata["name"]
-            hashes = file_metadata["hashes"]
+        #     name = file_metadata["name"]
+        #     hashes = file_metadata["hashes"]
 
-            new_file = create_file(
-                id=id,
-                name=name,
-                sid=sid,
-                size=size,
-                hashes=hashes,
-                tags=[],
-            )
-            new_files.append(new_file)
-            logger.debug(new_file)
+        #     new_file = create_file(
+        #         id=id,
+        #         name=name,
+        #         sid=sid,
+        #         size=size,
+        #         hashes=hashes,
+        #         tags=[],
+        #     )
+        #     new_files.append(new_file)
+        #     logger.debug(new_file)
 
-        new_metadata_files = {str(i): v for (i, v) in dict(enumerate(new_files)).items()}
-        raise NotImplementedError()
-        new_metadata = create_metadata(files=new_metadata_files)  # TODO: <---
-        logger.info(f"New metadata: {new_metadata}")
+        # new_metadata_files = {str(i): v for (i, v) in dict(enumerate(new_files)).items()}
+        # raise NotImplementedError()
+        # new_metadata = create_mlist_file(files=new_metadata_files)  # TODO: <---
+        # logger.info(f"New metadata: {new_metadata}")
 
-        inp = input("Does everything look good? [Y/n] ")
-        if inp not in ('y', 'Y'):
-            print("Cancelled.")
-            return
+        # inp = input("Does everything look good? [Y/n] ")
+        # if inp not in ('y', 'Y'):
+        #     print("Cancelled.")
+        #     return
 
-        self.metadata = new_metadata
-        self.update_metadata()
+        # self.metadata = new_metadata
+        # self.update_metadata()
 
     # def refresh_hashes(self):
     #     preferred_hash = hashing.PREFERRED_HASH.value
@@ -458,73 +524,73 @@ class Index(base.BaseIndex):
         self.update_metadata()
 
     @init
-    def remove(self, request):
+    def remove(self, request) -> typing.Optional[abstractmodels.AbstractReceiptFile]:
         # TODO: delete file from CORRECT INDEX FILE (need to track that somewhere)
         # TODO: remove index file if not needed anymore!
         raise NotImplementedError()
-        hash = request.hash
-        if not self.has_hash(hash):
-            logger.error(f"[-] No such file exists with that hash!")
-            return None
+        # hash = request.hash
+        # if not self.has_hash(hash):
+        #     logger.error(f"[-] No such file exists with that hash!")
+        #     return None
 
-        # NOTE: slightly lower-level than ideal...
-        index = self.hash_to_metadata_map[hash]
-        file = self.files()[index]
-        id = file["id"]
+        # # NOTE: slightly lower-level than ideal...
+        # index = self.hash_to_metadata_map[hash]
+        # file = self.files()[index]
+        # id = file["id"]
 
-        result = self.service.remove(file["sid"])
-        logger.info(result)
+        # result = self.service.remove(file["sid"])
+        # logger.info(result)
 
-        del self.hash_to_metadata_map[hash]
-        del self.id_to_metadata_map[id]
-        del self.files()[index]
+        # del self.hash_to_metadata_map[hash]
+        # del self.id_to_metadata_map[id]
+        # del self.files()[index]
 
-        logger.debug(self.hash_to_metadata_map.keys())
-        logger.debug(self.id_to_metadata_map.keys())
-        logger.debug(self.files().keys())
+        # logger.debug(self.hash_to_metadata_map.keys())
+        # logger.debug(self.id_to_metadata_map.keys())
+        # logger.debug(self.files().keys())
 
-        self.update_metadata()
+        # self.update_metadata()
 
-        return result
+        # return result
 
     @init
     def tag(self, requests=None, add=None, remove=None, set=None):
         raise NotImplementedError()
-        if not requests:
-            return self.files()
+        # if not requests:
+        #     return self.files()
 
-        requests = list(requests)
-        logger.debug(f"Applying tags add={add}, remove={remove}, set={set} to files {requests}")
+        # requests = list(requests)
+        # logger.debug(f"Applying tags add={add}, remove={remove}, set={set} to files {requests}")
 
-        updated_files = []
-        for request in requests:
-            try:
-                file = self.files()[self.hash_to_metadata_map[request.hash]]
-            except KeyError:
-                logger.error(f"No such file found ({request}) in Index {self}!")
-                continue
+        # updated_files = []
+        # for request in requests:
+        #     try:
+        #         file = self.files()[self.hash_to_metadata_map[request.hash]]
+        #     except KeyError:
+        #         logger.error(f"No such file found ({request}) in Index {self}!")
+        #         continue
 
-            logger.trace(f"Tagging file {file}")
-            logger.trace(f"Original tags: {file['tags']}")
+        #     logger.trace(f"Tagging file {file}")
+        #     logger.trace(f"Original tags: {file['tags']}")
 
-            tags = frozenset(file["tags"])
-            if add:
-                tags |= frozenset(add)
-            if remove:
-                tags -= frozenset(remove)
-            if set:
-                tags = frozenset(set)  # I apologize...
+        #     tags = frozenset(file["tags"])
+        #     if add:
+        #         tags |= frozenset(add)
+        #     if remove:
+        #         tags -= frozenset(remove)
+        #     if set:
+        #         tags = frozenset(set)  # I apologize...
 
-            file["tags"] = list(sorted(tags))
-            logger.trace(f"New tags: {file['tags']}")
+        #     file["tags"] = list(sorted(tags))
+        #     logger.trace(f"New tags: {file['tags']}")
 
-            updated_files.append(file)
+        #     updated_files.append(file)
 
-        # TODO: confirm with user before saving changes
+        # # TODO: confirm with user before saving changes
 
-        self.update_metadata()
+        # self.update_metadata()
 
-        return updated_files
+        # return updated_files
 
     def migrate_to_v2(self):
         raise NotImplementedError()
