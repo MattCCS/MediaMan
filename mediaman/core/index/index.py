@@ -103,6 +103,13 @@ def temporary(bytez) -> tempfile.NamedTemporaryFile:
     return tempfile_ref
 
 
+def set_where(lst, value, condition):
+    for (i, v) in enumerate(lst):
+        if condition(v):
+            lst[i] = value
+            return
+
+
 class Index(base.BaseIndex):
 
     MLIST_FILENAME = "mlist"
@@ -336,7 +343,7 @@ class Index(base.BaseIndex):
 
         # TODO(mcotton): configurable cutoff? computed?
         # if (should_create_new_index := True):
-        if (should_create_new_index := (len(most_recent_index["files"]) > 200)):
+        if (should_create_new_index := (len(most_recent_index["files"]) > 10_000)):
             new_index_id = f"index-{self.new_id()}"
             new_index = create_index_file()
             target_index_id = new_index_id
@@ -525,33 +532,68 @@ class Index(base.BaseIndex):
 
     @init
     def remove(self, request) -> typing.Optional[abstractmodels.AbstractReceiptFile]:
+        hash = request.hash
+        if not self.has_hash(hash):
+            logger.error(f"[-] No such file exists with that hash!")
+            return None
+
         # TODO: delete file from CORRECT INDEX FILE (need to track that somewhere)
         # TODO: remove index file if not needed anymore!
-        raise NotImplementedError()
-        # hash = request.hash
-        # if not self.has_hash(hash):
-        #     logger.error(f"[-] No such file exists with that hash!")
-        #     return None
+        # TODO(mcotton): id = self.hash_to_id_map[hash]
+        metadata = self.hash_to_metadata_map[hash]
+        file = self.files()[metadata]
+        id = file["id"]
 
-        # # NOTE: slightly lower-level than ideal...
-        # index = self.hash_to_metadata_map[hash]
-        # file = self.files()[index]
-        # id = file["id"]
+        # unlist file
+        index_id = self.file_to_index_map[id]
+        index_tracking = [i for i in self.mlist["data"]["indices"] if i["id"] == index_id][0]
+        index_sid = index_tracking["sid"]
 
-        # result = self.service.remove(file["sid"])
-        # logger.info(result)
+        index = self.indices[index_id]
+        index["files"] = [f for f in index["files"] if f["id"] != id]
 
-        # del self.hash_to_metadata_map[hash]
-        # del self.id_to_metadata_map[id]
-        # del self.files()[index]
+        if (index_is_empty := not index["files"]):
+            # unlist index
+            logger.debug("Index will be empty after file removal; de-listing index instead...")
+            self.mlist["data"]["indices"] = [i for i in self.mlist["data"]["indices"] if i["id"] != index_id]
+            mlist_receipt = self._upload_bytes(bytez=json.dumps(self.mlist), file_id=self.MLIST_FILENAME, encryption=None)
+            logger.debug(f"Wrote updated mlist with sid={mlist_receipt.id()} and removed index")
 
-        # logger.debug(self.hash_to_metadata_map.keys())
-        # logger.debug(self.id_to_metadata_map.keys())
-        # logger.debug(self.files().keys())
+            # remove index
+            index_receipt = self.service.remove(index_sid)
+            del self.indices[index_id]
+            logger.debug(f"Removed index -- {index_receipt=}")
+        else:
+            # update index (and sid)
+            index_receipt = self._upload_bytes(bytez=json.dumps(index), file_id=index_id, encryption=DEFAULT_ENCRYPTION)
+            logger.debug(f"Updated index -- {index_receipt=}")
 
-        # self.update_metadata()
+            # update mlist (this is a bummer, algorithmically...)
+            index_sid = index_receipt.id()
+            updated_index_entry = create_mlist_index_file_entry(
+                id=index_id,
+                sid=index_sid,
+                encryption=DEFAULT_ENCRYPTION,
+            )
+            set_where(self.mlist["data"]["indices"], updated_index_entry, lambda v: v["id"] == index_id)
+            mlist_receipt = self._upload_bytes(bytez=json.dumps(self.mlist), file_id=self.MLIST_FILENAME, encryption=None)
+            logger.debug(f"Wrote updated mlist with sid={mlist_receipt.id()} and updated index {updated_index_entry}")
 
-        # return result
+        # remove file
+        file_receipt = self.service.remove(file["sid"])
+        logger.info(f"Removed file -- {file_receipt=}")
+
+        # untrack file
+        del self.hash_to_metadata_map[hash]
+        del self.id_to_metadata_map[id]
+        del self.files()[metadata]
+        del self.file_to_index_map[id]
+
+        logger.trace(self.hash_to_metadata_map.keys())
+        logger.trace(self.id_to_metadata_map.keys())
+        logger.trace(self.files().keys())
+
+        return file_receipt
 
     @init
     def tag(self, requests=None, add=None, remove=None, set=None):
