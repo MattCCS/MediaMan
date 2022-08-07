@@ -20,17 +20,24 @@ def load_drive(config):
     return driveservice.DriveService(config)
 
 
+def load_hetzner_storage_box(config):
+    from mediaman.services.hetzner_storage_box import service as hetzner_storage_box_service
+    return hetzner_storage_box_service.HetznerStorageBoxService(config)
+
+
 class ServiceType(enum.Enum):
     FOLDER = "folder"
     GOOGLE_DRIVE = "google drive"
     DROPBOX = "dropbox"
     AWS_S3 = "aws s3"
     AWS_GLACIER = "aws glacier"
+    HETZNER_STORAGE_BOX = "hetzner storage box"
 
 
 SERVICE_TYPE_TO_LOADER = {
     ServiceType.FOLDER: load_local,
     ServiceType.GOOGLE_DRIVE: load_drive,
+    ServiceType.HETZNER_STORAGE_BOX: load_hetzner_storage_box,
 }
 
 

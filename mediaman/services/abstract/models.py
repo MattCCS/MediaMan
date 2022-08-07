@@ -88,7 +88,7 @@ class AbstractResultQuota(abc.ABC):
 
     @abc.abstractmethod
     def quota(self):
-        """The amount quota by the current quota (if any)."""
+        """The amount allowed by the current quota (if any)."""
         raise NotImplementedError()
 
     @abc.abstractmethod

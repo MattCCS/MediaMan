@@ -185,19 +185,19 @@ class Index(base.BaseIndex):
 
         if not mlist_file:
             logger.debug(f"Creating metadata")
-            self.metadata = create_mlist_file()
-            self.update_metadata()
+            self.create_metadata()
         else:
             logger.debug(f"Loading metadata")
             self.load_metadata(mlist_file)
 
-    def update_metadata(self):
-        raise NotImplementedError()
-        # TODO(mcotton): refactor this to understand mlist + multiple index files
-        # self._upload_bytes(json.dumps(self.mlist), file_id=Index.MLIST_FILENAME, encryption=None)
+    def create_metadata(self):
+        self.metadata = {"files": {}}  # TODO(mcotton): ditch the old metadata style
 
-        logger.debug(f"update_metadata receipt: {receipt}")
-        self.index_id = receipt.id()
+        self.mlist = create_mlist_file()
+        mlist_receipt = self._upload_bytes(json.dumps(self.mlist), file_id=Index.MLIST_FILENAME, encryption=None)
+
+        logger.debug(f"create_metadata receipt: {mlist_receipt}")
+        self.index_id = mlist_receipt.id()
 
     def load_metadata_json(self, mlist_file):
         logger.debug(f"load_metadata_json index: {mlist_file}")
@@ -338,12 +338,15 @@ class Index(base.BaseIndex):
             self.hash_to_metadata_map[hash] = new_index
 
         # Pick an index
-        most_recent_index_id = self.mlist["data"]["indices"][-1]["id"]
-        most_recent_index = self.indices[most_recent_index_id]
+        if not self.mlist["data"]["indices"]:
+            should_create_new_index = True
+        else:
+            most_recent_index_id = self.mlist["data"]["indices"][-1]["id"]
+            most_recent_index = self.indices[most_recent_index_id]
+            # TODO(mcotton): configurable cutoff? computed?
+            should_create_new_index = (len(most_recent_index["files"]) > 10_000)
 
-        # TODO(mcotton): configurable cutoff? computed?
-        # if (should_create_new_index := True):
-        if (should_create_new_index := (len(most_recent_index["files"]) > 10_000)):
+        if should_create_new_index:
             new_index_id = f"index-{self.new_id()}"
             new_index = create_index_file()
             target_index_id = new_index_id
@@ -377,7 +380,6 @@ class Index(base.BaseIndex):
             return None
 
         logger.trace(f"Downloading file with metadata: {metadata}")
-        encryption = metadata["encryption"]
         request = models.Request(
             id=metadata["sid"],
             path=root / metadata["name"],
@@ -515,20 +517,20 @@ class Index(base.BaseIndex):
 
     def refresh_global_hashes(self, hashes_by_hash):
         raise NotImplementedError()
-        for (hash, hashes) in hashes_by_hash.items():
-            if self.has_hash(hash):
-                file = self.get_metadata_by_hash(hash)
-                file["hashes"] = sorted(set(file["hashes"]) | hashes)
+        # for (hash, hashes) in hashes_by_hash.items():
+        #     if self.has_hash(hash):
+        #         file = self.get_metadata_by_hash(hash)
+        #         file["hashes"] = sorted(set(file["hashes"]) | hashes)
 
-        # TODO: there's no context here, user doesn't
-        # know which service they're approving changes for...
-        print(f"Repaired hashes: {self.files()}")
-        inp = input("Does everything look good? [Y/n] ")
-        if inp not in 'yY':
-            print("Cancelled.")
-            return
+        # # TODO: there's no context here, user doesn't
+        # # know which service they're approving changes for...
+        # print(f"Repaired hashes: {self.files()}")
+        # inp = input("Does everything look good? [Y/n] ")
+        # if inp not in 'yY':
+        #     print("Cancelled.")
+        #     return
 
-        self.update_metadata()
+        # self.update_metadata()
 
     @init
     def remove(self, request) -> typing.Optional[abstractmodels.AbstractReceiptFile]:
