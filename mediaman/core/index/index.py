@@ -598,43 +598,53 @@ class Index(base.BaseIndex):
         return file_receipt
 
     @init
-    def tag(self, requests=None, add=None, remove=None, set=None):
-        raise NotImplementedError()
-        # if not requests:
-        #     return self.files()
+    def tag(self, requests=None, add=None, remove=None, set=None) -> typing.List:
+        if not requests:
+            return []
 
-        # requests = list(requests)
-        # logger.debug(f"Applying tags add={add}, remove={remove}, set={set} to files {requests}")
+        requests = list(requests)
+        logger.debug(f"Applying tags add={add}, remove={remove}, set={set} to files {requests}")
 
-        # updated_files = []
-        # for request in requests:
-        #     try:
-        #         file = self.files()[self.hash_to_metadata_map[request.hash]]
-        #     except KeyError:
-        #         logger.error(f"No such file found ({request}) in Index {self}!")
-        #         continue
+        updated_files = []
+        for request in requests:
+            try:
+                file = self.files()[self.hash_to_metadata_map[request.hash]]
+            except KeyError:
+                logger.error(f"No such file found ({request}) in Index {self}!")
+                continue
 
-        #     logger.trace(f"Tagging file {file}")
-        #     logger.trace(f"Original tags: {file['tags']}")
+            logger.trace(f"Tagging file {file}")
+            logger.trace(f"Original tags: {file['tags']}")
 
-        #     tags = frozenset(file["tags"])
-        #     if add:
-        #         tags |= frozenset(add)
-        #     if remove:
-        #         tags -= frozenset(remove)
-        #     if set:
-        #         tags = frozenset(set)  # I apologize...
+            tags = frozenset(file["tags"])
+            if add:
+                tags |= frozenset(add)
+            if remove:
+                tags -= frozenset(remove)
+            if set:
+                tags = frozenset(set)  # I apologize...
 
-        #     file["tags"] = list(sorted(tags))
-        #     logger.trace(f"New tags: {file['tags']}")
+            file["tags"] = list(sorted(tags))
+            logger.trace(f"New tags: {file['tags']}")
 
-        #     updated_files.append(file)
+            updated_files.append(file)
 
-        # # TODO: confirm with user before saving changes
+        # Update the index (creating if necessary)
+        unique_index_ids = {*[]}  # I apologize...
+        for updated_file in updated_files:
+            index_id = self.file_to_index_map[updated_file["id"]]
+            index = self.indices[index_id]
+            unique_index_ids.add(index_id)
+            set_where(index["files"], updated_file, lambda f: f["id"] == updated_file["id"])
 
-        # self.update_metadata()
+        # TODO: confirm with user before saving changes
+        for target_index_id in unique_index_ids:
+            target_index = self.indices[target_index_id]
+            index_receipt = self._upload_bytes(bytez=json.dumps(target_index), file_id=target_index_id, encryption=DEFAULT_ENCRYPTION)
+            target_index_sid = index_receipt.id()
+            logger.debug(f"Wrote to {target_index_id=} with {target_index_sid=}")
 
-        # return updated_files
+        return updated_files
 
     def migrate_to_v2(self):
         raise NotImplementedError()
