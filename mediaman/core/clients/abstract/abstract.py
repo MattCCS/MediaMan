@@ -34,6 +34,11 @@ class AbstractClient(abc.ABC):
         """List all files with a name similar to the given name."""
         raise NotImplementedError()
 
+    # @abc.abstractmethod
+    # def search_by_tag(self, tag) -> models.AbstractResultFileList:
+    #     """List all files with the given tag."""
+    #     raise NotImplementedError()
+
     @abc.abstractmethod
     def upload(self, request) -> models.AbstractReceiptFile:
         """Upload the file(s) described by the given request."""
