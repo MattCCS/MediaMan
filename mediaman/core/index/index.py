@@ -30,7 +30,7 @@ DEFAULT_ENCRYPTION = {"cipher": "aes-256-cbc", "digest": "sha256"}
 def init(func):
     @functools.wraps(func)
     def wrapped(self, *args, **kwargs):
-        self.init_metadata()
+        self.init_metadata(force=False)
         return func(self, *args, **kwargs)
     return wrapped
 
@@ -175,10 +175,10 @@ class Index(base.BaseIndex):
         return self.metadata["files"]
 
     def force_init(self):
-        self.init_metadata()
+        self.init_metadata(force=True)
 
-    def init_metadata(self):
-        if self.index_id is not None:
+    def init_metadata(self, force=False):
+        if (not force) and (self.index_id is not None):
             return
 
         mlist_file = get_one_file_by_name(self.service, Index.MLIST_FILENAME)
@@ -487,8 +487,24 @@ class Index(base.BaseIndex):
         # self.metadata = new_metadata
         # self.update_metadata()
 
-    # def refresh_hashes(self):
-    #     preferred_hash = hashing.PREFERRED_HASH.value
+    def recompute_hash(self, sid):
+        with tempfile.NamedTemporaryFile("w+", delete=True) as tempfile_ref:
+            path = tempfile_ref.name
+            request = models.Request(
+                id=sid,
+                path=path,
+            )
+
+            self.service.download(request)
+            tempfile_ref.seek(0)
+
+            hash = hashing.hash(path)
+            logger.debug(f"Hash of {sid}: {hash}")
+            return hash
+
+
+    def refresh_hashes(self):
+        preferred_hash = hashing.PREFERRED_HASH.value
 
     #     for file in self.files().values():
 

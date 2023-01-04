@@ -75,8 +75,7 @@ default_apply = apply_consecutive
 
 
 def force_init(clients):
-    logger.warn("this is disabled")
-    # return multi_apply_concurrent(clients, "force_init")
+    return default_apply(clients, "force_init")
 
 
 def list_files(clients) -> Iterable[models.Response]:

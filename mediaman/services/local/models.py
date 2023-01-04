@@ -32,7 +32,7 @@ class LocalResultFile(models.AbstractResultFile):
 
         self.file_extension = file_data["suffix"]
 
-        stat = file_data["stat"]
+        stat = file_data["stat"]()
         self._size = stat.st_size
         self.accessedDate = stat.st_atime
         self.modifiedDate = stat.st_mtime
