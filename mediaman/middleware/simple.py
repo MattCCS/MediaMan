@@ -7,7 +7,7 @@ from mediaman.middleware import abstract
 def init(func):
     @functools.wraps(func)
     def wrapped(self, *args, **kwargs):
-        self.init_metadata()
+        self.init_metadata(force=False)
         return func(self, *args, **kwargs)
     return wrapped
 

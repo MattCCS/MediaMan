@@ -17,7 +17,7 @@ logger = logtools.new_logger(__name__)
 def init(func):
     @functools.wraps(func)
     def wrapped(self, *args, **kwargs):
-        self.init_metadata()
+        self.init_metadata(force=False)
         return func(self, *args, **kwargs)
     return wrapped
 
@@ -31,6 +31,7 @@ DEFAULT_KEY_PATH = os.path.expanduser("~/.mediaman/key")
 KEYPATH = config.load(CRYPTO_KEY_ENV_VAR, default=DEFAULT_KEY_PATH)
 
 OPENSSL_PREFERRED_BINS = [
+    "/usr/local/Cellar/libressl/3.3.5/bin",
     "/usr/local/Cellar/libressl/3.2.2/bin",
     "/usr/local/Cellar/libressl/2.9.2/bin",
     "/usr/bin",
@@ -179,8 +180,11 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
         self.metadata_id = None
         self.metadata = None
 
-    def init_metadata(self):
-        if self.metadata is not None:
+    def force_init(self):
+        self.init_metadata(force=True)
+
+    def init_metadata(self, force=False):
+        if (not force) and (self.metadata is not None):
             return
 
         # TODO: implement
@@ -252,11 +256,18 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
         return receipt
 
     def download(self, request):
+        # if request.id in ("crypt", "index"):
         if request.id not in self.metadata["data"]:
             logger.info(f"Downloading unencrypted file: {request}")
             return self.service.download(request)
 
         params = self.metadata["data"][request.id]
+        # data = self.metadata["data"]
+        # try:
+        #     params = data[request.id]
+        # except KeyError:
+        #     logger.warning(f"The encryption status of the file is unknown!  Using defaults: {request}")
+        #     params = {"cipher": DEFAULT_CIPHER, "digest": DEFAULT_DIGEST}
 
         keypath = KEYPATH
         cipher = params["cipher"]

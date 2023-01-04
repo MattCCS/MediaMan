@@ -7,9 +7,10 @@ class AbstractMulticlient(abstract.AbstractClient):
 
     def __init__(self, clients):
         self.clients = clients
-        # self.force_init()
+        # self.force_init()  # TODO: remove
 
     def force_init(self):
+        print("AMC force")
         return methods.force_init(self.clients)
 
     def name(self):

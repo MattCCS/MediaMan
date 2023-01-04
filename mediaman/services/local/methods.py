@@ -34,7 +34,7 @@ def extractor(path):
     return {
         "name": path.name,
         "suffix": path.suffix,
-        "stat": path.stat(),
+        "stat": lambda: path.stat(),
     }
 
 

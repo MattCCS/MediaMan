@@ -22,11 +22,13 @@ ERROR_MULTIPLE_REMOTE_INDICES = "\
 [!] Multiple index files found for service ({})!  \
 This must be resolved manually.  Exiting..."
 
+LAST_UPDATE = None
+
 
 def init(func):
     @functools.wraps(func)
     def wrapped(self, *args, **kwargs):
-        self.init_metadata()
+        self.init_metadata(force=False)
         return func(self, *args, **kwargs)
     return wrapped
 
@@ -82,10 +84,10 @@ class Index(base.BaseIndex):
         return self.metadata["files"]
 
     def force_init(self):
-        self.init_metadata()
+        self.init_metadata(force=True)
 
-    def init_metadata(self):
-        if self.index_id is not None:
+    def init_metadata(self, force=False):
+        if (not force) and (self.index_id is not None):
             return
 
         # TODO: implement
@@ -108,7 +110,7 @@ class Index(base.BaseIndex):
 
     def update_metadata(self):
         with tempfile.NamedTemporaryFile("w+", delete=True) as tempfile_ref:
-            tempfile_ref.write(json.dumps(self.metadata))
+            tempfile_ref.write(json.dumps(self.metadata))  # TODO: allow append-only mode!
             tempfile_ref.seek(0)
 
             request = models.Request(
@@ -388,9 +390,12 @@ class Index(base.BaseIndex):
     def refresh_file_list(self, metadata):
         sid_to_metadata = {f["sid"]: f for f in metadata["files"].values()}
 
+        RECOVER_FORGOTTEN_FILES = False
+        ASKED_ABOUT_FORGOTTEN_FILES = False
+
         current_files = self.service.list_files().results()
         new_files = []
-        for current_file in current_files:
+        for (i, current_file) in enumerate(current_files):
 
             # NOTE: we're listing raw files!
             sid = current_file.id()
@@ -398,18 +403,32 @@ class Index(base.BaseIndex):
             size = current_file.size()
             logger.debug(f"current_file: {current_file}")
 
+            file_metadata = None
             try:
                 file_metadata = sid_to_metadata[sid]
             except KeyError:
                 # TODO: MUST HANDLE THIS!
                 # This will occur for "index", but also for
                 # new/lost files.  Have to track them sanely.
-                logger.warn(f"Couldn't find metadata for sid '{sid}': {current_file}")
-                continue
+                logger.warn(f"Couldn't find metadata for file {i + 1}/{len(current_files)} with sid '{sid}': {current_file}")
 
-            name = file_metadata["name"]
-            hashes = file_metadata["hashes"]
-            merged_hashes = file_metadata["merged_hashes"]
+                if not RECOVER_FORGOTTEN_FILES and not ASKED_ABOUT_FORGOTTEN_FILES:
+                    ASKED_ABOUT_FORGOTTEN_FILES = True
+                    consent = input("Do you want to re-track forgotten files?  Their names will not be recovered. [Y/n] ") == 'Y'
+                    if consent:
+                        RECOVER_FORGOTTEN_FILES = True
+
+                if not RECOVER_FORGOTTEN_FILES:
+                    continue
+
+            if file_metadata:
+                name = file_metadata["name"]
+                hashes = file_metadata["hashes"]
+                merged_hashes = file_metadata["merged_hashes"]
+            else:
+                name = id
+                hashes = [self.recompute_hash(sid)]
+                merged_hashes = []
 
             new_file = create_file(
                 id=id,
@@ -434,6 +453,23 @@ class Index(base.BaseIndex):
 
         self.metadata = new_metadata
         self.update_metadata()
+
+
+    def recompute_hash(self, sid):
+        with tempfile.NamedTemporaryFile("w+", delete=True) as tempfile_ref:
+            path = tempfile_ref.name
+            request = models.Request(
+                id=sid,
+                path=path,
+            )
+
+            self.service.download(request)
+            tempfile_ref.seek(0)
+
+            hash = hashing.hash(path)
+            logger.debug(f"Hash of {sid}: {hash}")
+            return hash
+
 
     def refresh_hashes(self):
         preferred_hash = hashing.PREFERRED_HASH.value
