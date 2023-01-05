@@ -31,10 +31,12 @@ def require_destination_path(destination):
 
 
 def extractor(path):
+    # Lazily return stat information.  This yields much better performance
+    # when using network-attached storage, and with large lists.
     return {
         "name": path.name,
         "suffix": path.suffix,
-        "stat": path.stat(),
+        "stat": lambda: path.stat(),
     }
 
 

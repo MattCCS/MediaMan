@@ -22,6 +22,7 @@ DEFAULT_KEY_PATH = os.path.expanduser("~/.mediaman/key")
 KEYPATH = config.load(CRYPTO_KEY_ENV_VAR, default=DEFAULT_KEY_PATH)
 
 OPENSSL_PREFERRED_BINS = [
+    "/usr/local/Cellar/libressl/3.3.5/bin",
     "/usr/local/Cellar/libressl/3.2.2/bin",
     "/usr/local/Cellar/libressl/2.9.2/bin",
     "/usr/bin",
