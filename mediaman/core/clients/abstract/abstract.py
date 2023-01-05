@@ -7,6 +7,10 @@ from mediaman.services.abstract import models
 class AbstractClient(abc.ABC):
 
     @abc.abstractmethod
+    def force_init(self):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def name(self) -> str:
         raise NotImplementedError()
 

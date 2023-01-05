@@ -13,6 +13,7 @@ from mediaman.middleware import simple
 
 logger = logtools.new_logger(__name__)
 
+
 # <openssl> enc -<e/d> -<cipher> -kfile <keypath> -md <digest> -in <inpath> -out <outpath>
 DEFAULT_CIPHER = "aes-256-cbc"
 DEFAULT_DIGEST = "sha256"
@@ -166,9 +167,12 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
         super().__init__(service)
         logger.info(f"EncryptionMiddlewareService init for {service}")
 
-    # def init_metadata(self):
-    #     if self.metadata is not None:
-    #         return
+    def force_init(self):
+        self.init_metadata(force=True)
+
+    def init_metadata(self, force=False):
+        if (not force) and (self.metadata is not None):
+            return
 
     #     # TODO: implement
     #     file_list = self.service.search_by_name(EncryptionMiddlewareService.MIDDLEWARE_FILENAME)

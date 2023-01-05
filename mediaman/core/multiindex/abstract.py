@@ -10,6 +10,9 @@ class AbstractMultiIndex(abc.ABC):
     def __init__(self, client):
         self.client = client
 
+    def force_init(self):
+        return self.client.force_init()
+
     def list_files(self) -> models.AbstractResultFileList:
         return self.client.list_files()
 
