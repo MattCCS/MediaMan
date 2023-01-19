@@ -46,6 +46,8 @@ class DriveDownloadReceiptFile(models.AbstractDownloadReceiptFile, DriveReceiptF
 class DriveResultFile(models.AbstractResultFile):
 
     def __init__(self, file_data):
+        self._raw = file_data
+
         self._id = file_data["id"]
         self.title = file_data.get("title", "")
         self.file_size = int(file_data["fileSize"])

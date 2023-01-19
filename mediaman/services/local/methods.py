@@ -119,6 +119,7 @@ def stream(destination_path, request):
 
 
 def stream_range(destination_path, request, offset, length):
+    logger.debug(f"[local] stream_range {request=} {offset=} {length=}")
     source_file_path = destination_path / request.id
     with open(source_file_path, "rb") as infile:
         infile.seek(offset)

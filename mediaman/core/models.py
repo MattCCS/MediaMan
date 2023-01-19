@@ -21,10 +21,11 @@ def human_bytes(n):
 
 class Request:
 
-    def __init__(self, id=None, path=None, hash=None):
+    def __init__(self, id=None, path=None, hash=None, cacheable=False):
         self._id = id
         self._path = path
         self._hash = hash
+        self._cacheable = cacheable
 
     @property
     def id(self):

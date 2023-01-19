@@ -246,7 +246,7 @@ def stream_range(drive, request, folder_id=None, offset=0, length=0):
     http_request = drive.files().get_media(fileId=request.id)
     media_request = apiclient.http.MediaIoBaseDownload(memory_fd, http_request, start=offset, chunksize=max(65536, length))
 
-    logger.trace("Requested: offset={offset}, length={length}\n")
+    logger.trace(f"Requested: offset={offset}, length={length}\n")
 
     while True:
         try:

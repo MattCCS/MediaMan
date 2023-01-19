@@ -1,10 +1,12 @@
 
+import base64
 import functools
 import json
 import os
 import subprocess
 import tempfile
 
+from mediaman import caching
 from mediaman import config
 from mediaman.core import logtools
 from mediaman.core import models
@@ -46,6 +48,14 @@ def form_subprocess_environ():
     new_env = os.environ.copy()
     new_env["PATH"] = form_path_prepend()
     return new_env
+
+
+def to_cacheable_string(bytez):
+    return base64.b64encode(bytez).decode("utf-8")
+
+
+def from_cacheable_string(string):
+    return base64.b64decode(string.encode("utf-8"))
 
 
 def encrypt(request, keypath, cipher, digest):
@@ -341,7 +351,6 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
 
         import itertools
         import math
-        logger.debug(f"Getting CBC salt...")
         BLOCK_SIZE = 16
 
         start_block = offset // BLOCK_SIZE
@@ -350,8 +359,15 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
         global TEST_SESH
         try:
             salt = TEST_SESH[request.id]
+            logger.debug(f"Got memory-cached CBC salt...")
         except KeyError:
-            salt = [next(self.service.stream_range(request, 0, 16))]
+            cache_key = f"{self.service.nickname()}_id-{request.id}_CBC-salt"
+            if not (b64salt := caching.get_from_cache(cache_key)):
+                logger.debug(f"Getting CBC salt...")
+                salt = next(self.service.stream_range(request, 0, 16))
+                caching.put_in_cache(cache_key, to_cacheable_string(salt))
+            else:
+                salt = from_cacheable_string(b64salt)
             TEST_SESH[request.id] = salt
 
         skip = (start_block) * BLOCK_SIZE
@@ -359,7 +375,7 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
 
         data = self.service.stream_range(request, skip, count)
 
-        stream = itertools.chain(salt, data)
+        stream = itertools.chain([salt], data)
         out_stream = decrypt_stream(stream, keypath, cipher, digest)
 
         remaining = length

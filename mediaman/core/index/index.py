@@ -9,6 +9,8 @@ import tempfile
 import typing
 import uuid
 
+from mediaman import caching
+from mediaman import config
 from mediaman.core import hashing
 from mediaman.core import logtools
 from mediaman.core import models
@@ -96,6 +98,16 @@ def get_one_file_by_name(service, filename) -> typing.Optional[dict]:
     return files[0] if files else None
 
 
+def get_mlist_file_id(service) -> typing.Optional[dict]:
+    cache_key = f"{service.nickname()}-mlist-file-id"
+    if (cached_result := caching.get_from_cache(cache_key)):
+        return cached_result
+
+    result = get_one_file_by_name(service, Index.MLIST_FILENAME).id()
+    caching.put_in_cache(cache_key, result)
+    return result
+
+
 def temporary(bytez) -> tempfile.NamedTemporaryFile:
     tempfile_ref = tempfile.NamedTemporaryFile("w+", delete=True)
     tempfile_ref.write(bytez)
@@ -181,14 +193,14 @@ class Index(base.BaseIndex):
         if (not force) and (self.index_id is not None):
             return
 
-        mlist_file = get_one_file_by_name(self.service, Index.MLIST_FILENAME)
+        mlist_file_id = get_mlist_file_id(self.service)
 
-        if not mlist_file:
+        if not mlist_file_id:
             logger.debug(f"Creating metadata")
             self.create_metadata()
         else:
             logger.debug(f"Loading metadata")
-            self.load_metadata(mlist_file)
+            self.load_metadata(mlist_file_id)
 
     def create_metadata(self):
         self.metadata = {"files": {}}  # TODO(mcotton): ditch the old metadata style
@@ -199,17 +211,23 @@ class Index(base.BaseIndex):
         logger.debug(f"create_metadata receipt: {mlist_receipt}")
         self.index_id = mlist_receipt.id()
 
-    def load_metadata_json(self, mlist_file):
-        logger.debug(f"load_metadata_json index: {mlist_file}")
-        self.index_id = mlist_file.id()
+    def load_metadata_json(self, mlist_file_id):
+        logger.debug(f"load_metadata_json index: {mlist_file_id}")
+        self.index_id = mlist_file_id
 
-        # NOTE: mlist file is never encrypted
-        with self._downloaded(self.index_id, encryption=None) as tempfile_ref:
-            return json.loads(tempfile_ref.read())
+        cache_key = f"{self.service.nickname()}_mlist-file-id-{mlist_file_id}_data"
+        if not (mlist_data := caching.get_from_cache(cache_key)):
+            # NOTE: mlist file is never encrypted
+            with self._downloaded(self.index_id, encryption=None) as tempfile_ref:
+                mlist_data = json.loads(tempfile_ref.read())
+            caching.put_in_cache(cache_key, mlist_data)
 
-    def load_metadata(self, mlist_file):
-        logger.trace(f"Loading metadata: {mlist_file}")
-        mlist_data = self.load_metadata_json(mlist_file)
+        return mlist_data
+
+    def load_metadata(self, mlist_file_id):
+        logger.trace(f"Loading metadata: {mlist_file_id}")
+
+        mlist_data = self.load_metadata_json(mlist_file_id)
         self.mlist = mlist_data
         logger.trace(f"Loaded mlist_data: {mlist_data}")
 
@@ -229,17 +247,25 @@ class Index(base.BaseIndex):
         # Download and cache multiple indices
         self.metadata = {"files": {}}
         for index_envelope in mlist_data["data"]["indices"]:
-            index_id = index_envelope["id"]
-            index_sid = index_envelope["sid"]
-            index_encryption = index_envelope["encryption"]
-            with self._downloaded(index_sid, encryption=index_encryption) as tempfile_ref:
-                index_data = json.loads(tempfile_ref.read())
-                self.indices[index_id] = index_data
-                self._load_index_data(index_data, index_id)
+            self._download_index(index_envelope=index_envelope)
 
         logger.trace(f"Metadata loaded: {self.metadata}")
         logger.trace(f"Indices loaded: {self.indices=}")
         logger.trace(f"File -> index map: {self.file_to_index_map=}")
+
+    def _download_index(self, index_envelope):
+        index_id = index_envelope["id"]
+        index_sid = index_envelope["sid"]
+        index_encryption = index_envelope["encryption"]
+
+        cache_key = f"{self.service.nickname()}_index-sid-{index_sid}"
+        if not (index_data := caching.get_from_cache(cache_key)):
+            with self._downloaded(index_sid, encryption=index_encryption) as tempfile_ref:
+                index_data = json.loads(tempfile_ref.read())
+            caching.put_in_cache(cache_key, index_data)
+
+        self.indices[index_id] = index_data
+        self._load_index_data(index_data, index_id)
 
     def _load_index_data(self, index_data, index_id):
         logger.trace(f"Loading {index_data=}")
@@ -401,7 +427,7 @@ class Index(base.BaseIndex):
 
     @init
     def stream_range(self, root, identifier, offset, length):
-        logger.debug(f"Stream request for: '{identifier}' to '{root}'...")
+        logger.debug(f"Streamrange request for: '{identifier}' to '{root}'...")
         if not (metadata := self._resolve_identifier_to_file_metadata(identifier)):
             return metadata
 
