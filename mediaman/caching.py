@@ -10,9 +10,10 @@ from mediaman.core import logtools
 
 
 REDIS = None
+REDIS_KEY_PREFIX = "mattccs.mediaman"
 logger = logtools.new_logger(__name__)
 
-if (USE_REDIS := bool(config.load("redis-cache", default=False))):
+if (USE_REDIS := bool(config.load("use-redis", default=False))):
     try:
         import redis
         REDIS = redis.Redis()
@@ -26,10 +27,12 @@ if (USE_REDIS := bool(config.load("redis-cache", default=False))):
 
 
 def put_in_cache(key, value) -> None:
-    global REDIS
+    global REDIS, REDIS_KEY_PREFIX
     if not REDIS:
         logger.debug("[.] Cache disabled or not available; won't put.")
         return
+
+    key = f"{REDIS_KEY_PREFIX}-{key}"
 
     try:
         json_value = json.dumps(value)
@@ -44,10 +47,12 @@ def put_in_cache(key, value) -> None:
 
 
 def get_from_cache(key) -> typing.Optional[typing.Any]:
-    global REDIS
+    global REDIS, REDIS_KEY_PREFIX
     if not REDIS:
         logger.debug("[.] Cache disabled or not available; won't get.")
         return None
+
+    key = f"{REDIS_KEY_PREFIX}-{key}"
 
     try:
         json_value = REDIS.get(name=key)
@@ -64,3 +69,13 @@ def get_from_cache(key) -> typing.Optional[typing.Any]:
         return value
     except (TypeError, ValueError):
         logger.error(f"[!] Failed to deserialize redis value ({json_value}) as JSON -- something bad is happening!", exc_info=True)
+
+
+def clear_cache() -> None:
+    global REDIS, REDIS_KEY_PREFIX
+    if not REDIS:
+        logger.debug("[.] Cache disabled or not available; won't clear cache.")
+        return None
+
+    if (keys := REDIS.keys(f"{REDIS_KEY_PREFIX}*")):
+        REDIS.delete(*keys)

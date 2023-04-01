@@ -103,7 +103,10 @@ def get_mlist_file_id(service) -> typing.Optional[dict]:
     if (cached_result := caching.get_from_cache(cache_key)):
         return cached_result
 
-    result = get_one_file_by_name(service, Index.MLIST_FILENAME).id()
+    if not (result_file := get_one_file_by_name(service, Index.MLIST_FILENAME)):
+        return None
+
+    result = result_file.id()
     caching.put_in_cache(cache_key, result)
     return result
 
@@ -328,6 +331,8 @@ class Index(base.BaseIndex):
 
     @init
     def upload(self, request):
+        caching.clear_cache()
+
         name = pathlib.Path(request.path).name
         size = os.stat(request.path).st_size
         hash = request.hash
@@ -370,13 +375,16 @@ class Index(base.BaseIndex):
             most_recent_index_id = self.mlist["data"]["indices"][-1]["id"]
             most_recent_index = self.indices[most_recent_index_id]
             # TODO(mcotton): configurable cutoff? computed?
-            should_create_new_index = (len(most_recent_index["files"]) > 10_000)
+            should_create_new_index = (len(most_recent_index["files"]) > 10)
 
         if should_create_new_index:
             new_index_id = f"index-{self.new_id()}"
             new_index = create_index_file()
             target_index_id = new_index_id
             target_index = new_index
+
+            # Add a reference to the index, since it's new
+            self.indices[new_index_id] = new_index
         else:
             target_index_id = most_recent_index_id
             target_index = most_recent_index
@@ -559,6 +567,7 @@ class Index(base.BaseIndex):
 
     def refresh_global_hashes(self, hashes_by_hash):
         raise NotImplementedError()
+        caching.clear_cache()
         # for (hash, hashes) in hashes_by_hash.items():
         #     if self.has_hash(hash):
         #         file = self.get_metadata_by_hash(hash)
@@ -576,6 +585,8 @@ class Index(base.BaseIndex):
 
     @init
     def remove(self, request) -> typing.Optional[abstractmodels.AbstractReceiptFile]:
+        caching.clear_cache()
+
         hash = request.hash
         if not self.has_hash(hash):
             logger.error(f"[-] No such file exists with that hash!")
@@ -641,6 +652,8 @@ class Index(base.BaseIndex):
 
     @init
     def tag(self, requests=None, add=None, remove=None, set=None) -> typing.List:
+        caching.clear_cache()
+
         if not requests:
             return []
 

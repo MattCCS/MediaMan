@@ -58,6 +58,9 @@ class Multiclient(abstract.AbstractMulticlient):
     def search_by_hash(self, hash):
         return gen_all(methods.search_by_hash(self.clients, hash))
 
+    def has_hash(self, hash):
+        return gen_all(methods.has_hash(self.clients, hash))
+
     def tag(self, *args, **kwargs):
         return gen_all(methods.tag(self.clients, *args, **kwargs))
 

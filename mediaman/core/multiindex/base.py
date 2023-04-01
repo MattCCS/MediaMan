@@ -79,6 +79,15 @@ class BaseMultiIndex(abstract.AbstractMultiIndex):
 
         yield from zip(identifiers, map(self.client.search_by_hash, identifiers))
 
+    def has_hash(self, *identifiers) -> List[abstractmodels.AbstractResultFile]:
+        for identifier in identifiers:
+            # TODO: this should allow any valid hash, or ID
+            if not validation.is_valid_hash(identifier):
+                logger.error(f"May only pass hashes to `has-hash` method, got '{identifier}'.")
+                return
+
+        yield from zip(identifiers, map(self.client.has_hash, identifiers))
+
     def tag(self, root, identifiers=None, add=None, remove=None, set=None) -> List[abstractmodels.AbstractResultFile]:
         requests = []
 

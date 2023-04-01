@@ -33,6 +33,9 @@ class SingleClient(abstract.AbstractSingleClient):
     def search_by_hash(self, hash):
         return list(self.index.search_by_hash(hash))
 
+    def has_hash(self, hash):
+        return self.index.has_hash(hash)
+
     def upload(self, request):
         return self.index.upload(request)
 

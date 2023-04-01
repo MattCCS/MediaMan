@@ -52,6 +52,10 @@ def ensure_configuration():
         reload_configuration()
 
 
+def config_key_to_env_var(key):
+    return f"MM_{key.upper().replace('-','_')}"
+
+
 def load(key, default=None):
     """
     Loads the given key from the preset configuration YAML file.
@@ -61,7 +65,7 @@ def load(key, default=None):
     """
     ensure_configuration()
     try:
-        return CONFIGURATION.get(key, os.environ.get(key, default))
+        return CONFIGURATION.get(key, os.environ.get(config_key_to_env_var(key), default))
     except AttributeError as exc:
         raise Exception(ERROR_GENERIC_CONFIGURATION_FAILURE) from exc
 
@@ -72,7 +76,7 @@ def load_safe(key):
         return CONFIGURATION[key]
     except KeyError:
         try:
-            return os.environ[key]
+            return os.environ[config_key_to_env_var(key)]
         except KeyError:
             print(f"Failed to load `{key}` from your config file!\n")
     exit_with_generic_warning()

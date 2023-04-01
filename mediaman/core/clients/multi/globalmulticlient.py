@@ -94,8 +94,7 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
 
     def has(self, request):
         hash = request.hash
-        result = list(gen_first_valid(methods.has_hash(self.clients, hash)))
-        return result[0] if result else False
+        return self.has_hash(request.hash)
 
     def search_by_name(self, file_name):
         results = gen_all(methods.search_by_name(self.clients, file_name))
@@ -344,6 +343,10 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
                 if not keys & deduped_results:
                     yield each
                 deduped_results.update(keys)
+
+    def has_hash(self, hash):
+        result = list(gen_first_valid(methods.has_hash(self.clients, hash)))
+        return result[0] if result else False
 
     def tag(self, *args, **kwargs):
         raise NotImplementedError()  # `mm tag` is not allowed (yet)

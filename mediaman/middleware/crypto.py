@@ -41,7 +41,7 @@ TEST_SESH = {}  # name: salt
 
 def form_path_prepend():
     global OPENSSL_PREFERRED_BINS
-    return ":".join(OPENSSL_PREFERRED_BINS + [config.load_safe("PATH")])  # TODO: replace with env call
+    return ":".join(OPENSSL_PREFERRED_BINS + [os.environ["PATH"]])
 
 
 def form_subprocess_environ():
@@ -83,9 +83,10 @@ def decrypt(source, destination, keypath, cipher, digest):
         "-out", str(destination),
         "-kfile", keypath, f"-{cipher}", "-md", digest,
     ]
-    logger.info(f"decrypting: {args}")
 
-    logger.info(f"Decrypting file...")
+    logger.info(f"Decrypting file to {str(destination)}...")
+    logger.debug(f"Decrypting file with args: {args}")
+
     try:
         subprocess.check_output(args, stderr=subprocess.PIPE, env=form_subprocess_environ())
     except subprocess.CalledProcessError as exc:
@@ -120,13 +121,14 @@ def decrypt_stream(source, keypath, cipher, digest):
         "-kfile", keypath, f"-{cipher}", "-md", digest,
         "-bufsize", "1048576",
     ]
-    logger.info(f"decrypting: {args}")
-
     logger.info(f"Decrypting stream...")
+    logger.debug(f"Decrypting stream with args: {args}")
+
     try:
         process = subprocess.Popen(
             args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, env=form_subprocess_environ())
+        logger.trace("Started ssl subprocess")
 
         # threading.Thread(target=deal_with_stdout, args=[process, sink]).start()
         # for bytez in source:
@@ -134,6 +136,8 @@ def decrypt_stream(source, keypath, cipher, digest):
         #     process.stdin.flush()
 
         threading.Thread(target=pump_input, args=[process.stdin, source]).start()
+        logger.trace("Started sink thread")
+
         # import sys
         # sink = sys.stdout.buffer
         # for bytez in process.stdout:
@@ -145,6 +149,7 @@ def decrypt_stream(source, keypath, cipher, digest):
             if not bytez:
                 return
             yield bytez
+
         # for bytez in process.stdout:
         #     logger.debug(bytez)
         #     yield bytez
@@ -344,6 +349,8 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
             yield bytez
             remaining -= len(bytez)
 
+        logger.trace("Continuous sink drained")
+
     def stream_range_discontinuous(self, request, offset, length, encryption):
         keypath = KEYPATH
         cipher = encryption["cipher"]
@@ -396,3 +403,5 @@ class EncryptionMiddlewareService(simple.SimpleMiddleware):
 
             yield bytez
             remaining -= len(bytez)
+
+        logger.trace("Discontinuous sink drained")

@@ -110,6 +110,10 @@ def search_by_hash(clients, hash) -> Iterable[models.Response]:
     return default_apply(clients, "search_by_hash", hash)
 
 
+def has_hash(clients, hash) -> Iterable[models.Response]:
+    return default_apply(clients, "has_hash", hash)
+
+
 def upload(clients, file_path) -> Iterable[models.Response]:
     return default_apply(clients, "upload", file_path)
 

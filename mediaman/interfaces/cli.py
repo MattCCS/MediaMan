@@ -35,6 +35,7 @@ CAPACITY_TEXT = "Report on the visible capacity of MediaMan"
 CONFIG_TEXT = "Show the config info of MediaMan"
 REFRESH_TEXT = "Refresh the tracking info of MediaMan"
 SEARCH_BY_HASH_TEXT = "Search MediaMan for the given hash(es)"
+HAS_HASH_TEXT = "Check whether MediaMan has the given hash(es)"
 TAG_TEXT = "Set tags on one or more files in MediaMan"
 
 LIST_TEXT_SERVICE = "List all files indexed by this service"
@@ -51,6 +52,7 @@ CONFIG_TEXT_SERVICE = "Show the config info of this service"
 REFRESH_TEXT_SERVICE = "Refresh the tracking info of this service"
 REMOVE_TEXT_SERVICE = "Remove the given file(s) from this service (by hash only)"
 SEARCH_BY_HASH_TEXT_SERVICE = "Search this service for the given hash(es)"
+HAS_HASH_TEXT_SERVICE = "Check whether this service has the given hash(es)"
 TAG_TEXT_SERVICE = "Set tags on one or more files in this service"
 
 
@@ -72,6 +74,7 @@ class Action(enum.Enum):
     REFRESH = "refresh"
     REMOVE = "remove"
     SEARCH_BY_HASH = "search-by-hash"
+    HAS_HASH = "has-hash"
     TAG = "tag"
 
     MIGRATE_TO_V2 = "migrate-to-v2"  # TODO: temporary command
@@ -185,6 +188,7 @@ def add_commands(subparsers, service=None):
     p_config = add_parser(Action.CONFIG.value, description=f"[{service}] -- {CONFIG_TEXT_SERVICE}" if service else CONFIG_TEXT)
     add_parser(Action.REFRESH.value, description=f"[{service}] -- {REFRESH_TEXT_SERVICE}" if service else REFRESH_TEXT)
     p_search_by_hash = add_parser(Action.SEARCH_BY_HASH.value, description=f"[{service}] -- {SEARCH_BY_HASH_TEXT_SERVICE}" if service else SEARCH_BY_HASH_TEXT)
+    p_has_hash = add_parser(Action.HAS_HASH.value, description=f"[{service}] -- {HAS_HASH_TEXT_SERVICE}" if service else HAS_HASH_TEXT)
     p_tag = add_parser(Action.TAG.value, description=f"[{service}] -- {TAG_TEXT_SERVICE}" if service else TAG_TEXT)
     p_migrate_to_v2 = add_parser(Action.MIGRATE_TO_V2.value, description=f"[{service}] -- migrate to v2")
 
@@ -201,7 +205,7 @@ def add_commands(subparsers, service=None):
     for parser in [p_config]:
         parser.add_argument("-e", "--edit", action="store_true", default=False, help="Edit the config file with your $EDITOR")
 
-    for parser in [p_search_by_hash]:
+    for parser in [p_search_by_hash, p_has_hash]:
         parser.add_argument("hashes", nargs="+")
 
     for parser in [p_tag]:
@@ -210,7 +214,7 @@ def add_commands(subparsers, service=None):
         parser.add_argument("-r", "--remove", nargs="+", help="Remove the given tag(s) (idempotent)")
         parser.add_argument("-s", "--set", nargs="+", help="Set the given tag(s), removing any tags not mentioned")
 
-    for parser in [p_list, p_search, p_fuzzy, p_search_by_hash]:
+    for parser in [p_list, p_search, p_fuzzy, p_search_by_hash, p_has_hash]:
         parser.add_argument("-r", "--raw", action="store_true", default=False, help="Do not print an ASCII table")
 
 
@@ -220,6 +224,7 @@ def run_services():
 
 def human_bytes(n):
     """Return the given bytes as a human-friendly string"""
+    # return str(n)  # TODO(mcotton): Raw should show bytes
 
     step = 1000
     abbrevs = ['KB', 'MB', 'GB', 'TB']
@@ -288,6 +293,8 @@ def main():
             results = api.run_fuzzy(*args.files, service_selector=service_selector)
         elif args.action == Action.SEARCH_BY_HASH.value:
             results = api.run_search_by_hash(*args.hashes, service_selector=service_selector)
+        elif args.action == Action.HAS_HASH.value:
+            results = api.has_hash(*args.hashes, service_selector=service_selector)
         else:
             raise NotImplementedError()
 
@@ -308,15 +315,22 @@ def main():
     elif args.action == "services":
         print(run_services())
         exit(0)
-    elif args.action == "has":
-        all_results = api.run_has(root, *args.files, service_selector=service_selector)
+    elif args.action in {Action.HAS.value, Action.HAS_HASH.value}:
+        if args.action == Action.HAS.value:
+            inputs = args.files
+            all_results = api.run_has(root, *args.files, service_selector=service_selector)
+            max_filename = max([len(str(pathlib.Path(f).absolute())) for f in args.files])
+            print([str(pathlib.Path(f).absolute()) for f in args.files])
+            print(max_filename)
+            columns = (("name", max(4, max_filename)),)
+        else:
+            inputs = args.hashes
+            all_results = api.run_has_hash(*args.hashes, service_selector=service_selector)
+            max_hash_length = max(map(len, args.hashes))
+            columns = (("hash", max(4, max_hash_length)),)
 
         service_names = sorted(set(api.get_service_names()) - set(["all"]))
-        max_filename = max([len(str(pathlib.Path(f).absolute())) for f in args.files])
-        print([str(pathlib.Path(f).absolute()) for f in args.files])
-        print(max_filename)
 
-        columns = (("name", max(4, max_filename)),)
         if all_mode:
             columns += tuple((service, len(service)) for service in service_names)
         else:
@@ -334,7 +348,7 @@ def main():
                     yield (request, ("No" if not result else "Yes"))
 
         gen = watertable.table_stream(columns, inverted_iter(
-            service_names, args.files, all_results, all_mode=all_mode))
+            service_names, inputs, all_results, all_mode=all_mode))
 
         for row in gen:
             print(row)

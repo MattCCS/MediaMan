@@ -65,5 +65,9 @@ class AbstractMultiIndex(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def has_hash(self, *identifiers):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def tag(self, root, identifiers=None, add=None, remove=None, set=None) -> List[models.AbstractResultFile]:
         raise NotImplementedError()
