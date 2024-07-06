@@ -118,7 +118,7 @@ def temporary(bytez) -> tempfile.NamedTemporaryFile:
     return tempfile_ref
 
 
-def set_where(lst, value, condition):
+def set_first_where(lst, value, condition):
     for (i, v) in enumerate(lst):
         if condition(v):
             lst[i] = value
@@ -375,7 +375,7 @@ class Index(base.BaseIndex):
             most_recent_index_id = self.mlist["data"]["indices"][-1]["id"]
             most_recent_index = self.indices[most_recent_index_id]
             # TODO(mcotton): configurable cutoff? computed?
-            should_create_new_index = (len(most_recent_index["files"]) > 10)
+            should_create_new_index = (len(most_recent_index["files"]) > 100)
 
         if should_create_new_index:
             new_index_id = f"index-{self.new_id()}"
@@ -630,7 +630,7 @@ class Index(base.BaseIndex):
                 sid=index_sid,
                 encryption=DEFAULT_ENCRYPTION,
             )
-            set_where(self.mlist["data"]["indices"], updated_index_entry, lambda v: v["id"] == index_id)
+            set_first_where(self.mlist["data"]["indices"], updated_index_entry, lambda v: v["id"] == index_id)
             mlist_receipt = self._upload_bytes(bytez=json.dumps(self.mlist), file_id=self.MLIST_FILENAME, encryption=None)
             logger.debug(f"Wrote updated mlist with sid={mlist_receipt.id()} and updated index {updated_index_entry}")
 
@@ -690,7 +690,7 @@ class Index(base.BaseIndex):
             index_id = self.file_to_index_map[updated_file["id"]]
             index = self.indices[index_id]
             unique_index_ids.add(index_id)
-            set_where(index["files"], updated_file, lambda f: f["id"] == updated_file["id"])
+            set_first_where(index["files"], updated_file, lambda f: f["id"] == updated_file["id"])
 
         # TODO: confirm with user before saving changes
         for target_index_id in unique_index_ids:

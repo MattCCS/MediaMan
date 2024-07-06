@@ -16,9 +16,13 @@ def load_multiindex_class():
 
 
 def load_single_client(service):
+    from mediaman.core.clients.single import unaryclient
     from mediaman.core.clients.single import client as singleclient
     return load_multiindex_class()(
-        singleclient.SingleClient(load_index_class()(load_middleware_applicator()(service))))
+        unaryclient.UnaryClient(
+            singleclient.SingleClient(load_index_class()(load_middleware_applicator()(service)))
+        )
+    )
 
 
 def load_multi_client(services):

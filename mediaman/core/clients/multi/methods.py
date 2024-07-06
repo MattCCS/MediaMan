@@ -14,9 +14,9 @@ def apply_consecutive(clients, func_name, *args, **kwargs):
     for client in clients:
         try:
             result = getattr(client, func_name)(*args, **kwargs)
-            go = yield models.Response(client, result, None)
+            go = yield models.Response(client, response=result, exception=None)
         except Exception as exc:
-            go = yield models.Response(client, None, exc)
+            go = yield models.Response(client, response=None, exception=exc)
 
         if not go:
             return

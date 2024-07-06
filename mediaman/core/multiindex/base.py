@@ -27,6 +27,13 @@ def resolve_identifier(root, identifier) -> models.Request:
 
 
 class BaseMultiIndex(abstract.AbstractMultiIndex):
+    """
+    This might more appropriately be called a PluralIndex.
+
+    It is an interface for handling N-ary requests in sequential order.
+
+    TODO: This is not even really an index, and can probably be reduced to functions.
+    """
 
     def has(self, root, *file_paths) -> List[abstractmodels.AbstractResultFile]:
         abs_paths = list(paths.resolve_abs_paths(root, file_paths))

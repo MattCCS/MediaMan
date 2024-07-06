@@ -5,6 +5,8 @@ Universal API to interact with MediaMan
 import sys
 assert sys.version_info >= (3, 7, 0)  # noqa
 
+from typing import Any, Generic, Iterator, List, Tuple, Union
+
 from mediaman.core import policy
 
 
@@ -24,36 +26,43 @@ __all__ = [
     "get_service_description",
 ]
 
+Request = Any  # str?
+Client = Any
+Result = Any  # Union[dict, bool]
+
+ServiceResponse = Tuple[Client, List[Result]]
+Transaction = Tuple[Request, Iterator[ServiceResponse]]
+
 
 def run_list(service_selector=None):
     return policy.load_client(service_selector=service_selector).list_files()
 
 
-def run_has(root, *file_names, service_selector=None):
+def run_has(root, *file_names, service_selector=None) -> Iterator[Transaction]:
     return policy.load_client(service_selector=service_selector).has(root, *file_names)
 
 
-def run_get(root, *file_names, service_selector=None):
+def run_get(root, *file_names, service_selector=None) -> Iterator[Transaction]:
     return policy.load_client(service_selector=service_selector).download(root, *file_names)
 
 
-def run_stream(root, file_name, service_selector=None):
+def run_stream(root, file_name, service_selector=None) -> Iterator[bytes]:
     return policy.load_client(service_selector=service_selector).stream(root, file_name)
 
 
-def run_stream_range(root, file_name, offset, length, service_selector=None):
+def run_stream_range(root, file_name, offset, length, service_selector=None) -> Iterator[bytes]:
     return policy.load_client(service_selector=service_selector).stream_range(root, file_name, offset, length)
 
 
-def run_put(root, *file_names, service_selector=None):
+def run_put(root, *file_names, service_selector=None) -> Iterator[Transaction]:
     return policy.load_client(service_selector=service_selector).upload(root, *file_names)
 
 
-def run_search(*file_names, service_selector=None):
+def run_search(*file_names, service_selector=None) -> Iterator[Transaction]:
     return policy.load_client(service_selector=service_selector).search_by_name(*file_names)
 
 
-def run_fuzzy(*file_names, service_selector=None):
+def run_fuzzy(*file_names, service_selector=None) -> Iterator[Transaction]:
     return policy.load_client(service_selector=service_selector).fuzzy_search_by_name(*file_names)
 
 
@@ -69,12 +78,20 @@ def run_config(service_selector=None):
     return policy.load_policy().get_config(service_selector=service_selector)
 
 
-def get_service_names():
+def get_service_names() -> List[str]:
     return policy.load_service_names()
 
 
 def get_service_description(service_selector):
     return policy.load_policy().load_service_description(service_selector)
+
+
+def run_clone(target_services, hashes=None, source_services=None):
+    return policy.load_client(service_selector=None).clone(
+        target_services=target_services,
+        hashes=hashes,
+        source_services=source_services,
+    )
 
 
 def run_sync(service_selector=None):
@@ -85,19 +102,19 @@ def run_refresh(service_selector=None):
     return policy.load_client(service_selector=service_selector).refresh()
 
 
-def run_remove(*identifiers, service_selector=None):
+def run_remove(*identifiers, service_selector=None) -> Iterator[Transaction]:
     return policy.load_client(service_selector=service_selector).remove(*identifiers)
 
 
-def run_search_by_hash(*identifiers, service_selector=None):
+def run_search_by_hash(*identifiers, service_selector=None) -> Iterator[Transaction]:
     return policy.load_client(service_selector=service_selector).search_by_hash(*identifiers)
 
 
-def run_has_hash(*identifiers, service_selector=None):
+def run_has_hash(*identifiers, service_selector=None) -> Iterator[Transaction]:
     return policy.load_client(service_selector=service_selector).has_hash(*identifiers)
 
 
-def run_tag(root, identifiers, add, remove, set, service_selector=None):
+def run_tag(root, identifiers, add, remove, set, service_selector=None) -> Iterator[Transaction]:
     return policy.load_client(service_selector=service_selector).tag(root, identifiers=identifiers, add=add, remove=remove, set=set)
 
 

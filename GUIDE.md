@@ -15,10 +15,11 @@ A command with a service specified is called a "service" command.
 ## Service Types
 1. `local` Filesystem
     a. Local / USB device
-    b. Network (TBD)
+    b. Network (as locally-mounted filepath)
 2. `drive` - Google Drive
 3. `glacier` - Amazon Glacier (TBD)
 4. `dropbox` - Dropbox (TBD)
+5. `hetzner storage box` - Hetzner Storage Box
 
 ## Commands
 

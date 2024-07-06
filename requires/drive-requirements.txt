@@ -2,6 +2,22 @@
 
 google-api-python-client
 oauth2client
+httplib2==0.15.0  # https://github.com/googleapis/google-api-python-client/issues/803
+# (0.18.0 failed)
+
+# (blackair)
+# google-api-core==2.11.0
+# google-api-python-client==2.70.0
+# google-auth==2.15.0
+# google-auth-httplib2==0.1.0
+# googleapis-common-protos==1.57.0
+
+# (blackmini)
+# google-api-core==1.25.1
+# google-api-python-client==1.12.8
+# google-auth==1.24.0
+# google-auth-httplib2==0.0.4
+# googleapis-common-protos==1.52.0
 
 # asn1crypto
 # cachetools

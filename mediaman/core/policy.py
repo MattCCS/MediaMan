@@ -32,7 +32,7 @@ def load_service_names():
         return []
 
     try:
-        config_services = config.load_safe(SERVICES_CONFIG_KEY)
+        config_services = config.load_strict(SERVICES_CONFIG_KEY)
     except TypeError:
         logger.error(traceback.format_exc())
         return []

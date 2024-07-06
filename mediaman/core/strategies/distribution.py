@@ -2,7 +2,7 @@
 import copy
 from typing import Mapping, Set
 
-import sortedcontainers
+# import sortedcontainers
 
 
 class Obj:

@@ -1,9 +1,14 @@
 
+import contextlib
 import enum
+import subprocess
 import sys
 
 from mediaman.core import api
 from mediaman.core import logtools
+
+
+PAGER = False
 
 
 COMMAND_NAME = "mm"
@@ -21,6 +26,7 @@ Run `mm <service> (-h | --help)` for more info about any particular service."""
 
 SERVICES_TEXT = """List the service nicknames found in your config file.
 (Does not guarantee that the services are active, or are even configured properly.)"""
+CLONE_TEXT = "Clones files between services"
 SYNC_TEXT = "Synchronizes all services (if possible)"
 LIST_TEXT = "List all files indexed by MediaMan"
 HAS_TEXT = "Check whether MediaMan has the given file(s)"
@@ -58,6 +64,7 @@ TAG_TEXT_SERVICE = "Set tags on one or more files in this service"
 
 class Action(enum.Enum):
     SERVICES = "services"
+    CLONE = "clone"
     SYNC = "sync"
 
     LIST = "list"
@@ -83,6 +90,16 @@ class Action(enum.Enum):
 ACTIONS = frozenset(action.value for action in Action)
 
 
+def stdout(string):
+    sys.stdout.write(str(string) + "\n")
+    sys.stdout.flush()
+
+
+def stderr(string):
+    sys.stderr.write(str(string) + "\n")
+    sys.stderr.flush()
+
+
 def parse_args():
     if len(sys.argv) < 2:
         exit(parse_args_empty())  # to show short description
@@ -97,7 +114,7 @@ def parse_args():
     if help and not (services or actions):
         exit(parse_args_base(service_names))
 
-    if not services:
+    if sys.argv[1] not in set(service_names):
         args = parse_args_action()
         args.service = None
     else:
@@ -108,7 +125,7 @@ def parse_args():
 
 def parse_args_empty():
     """Check for `mm`"""
-    print(SHORT_DESCRIPTION)
+    stderr(SHORT_DESCRIPTION)
     exit()
 
 
@@ -169,6 +186,10 @@ def add_commands(subparsers, service=None):
 
     if not service:
         add_parser(Action.SERVICES.value, description=SERVICES_TEXT)
+        p_clone = add_parser(Action.CLONE.value, description=CLONE_TEXT)
+        p_clone.add_argument("-t", "--to-services", nargs="+", help="Clone files to the given services")
+        p_clone.add_argument("-f", "--from-services", nargs="+", help="[Optional] Restrict the clone to pull from the given services")
+        p_clone.add_argument("-H", "--hashes", nargs="+", help="[Optional] Restrict the clone to the given file hashes")
         add_parser(Action.SYNC.value, description=SYNC_TEXT)
 
     if service:
@@ -217,6 +238,10 @@ def add_commands(subparsers, service=None):
     for parser in [p_list, p_search, p_fuzzy, p_search_by_hash, p_has_hash]:
         parser.add_argument("-r", "--raw", action="store_true", default=False, help="Do not print an ASCII table")
 
+    for parser in [p_list, p_search, p_fuzzy, p_search_by_hash]:
+        parser.add_argument("-p", "--pipe", action="store_true", default=False, help="Pipe-friendly output only (write hashes to STDOUT)")
+
+
 
 def run_services():
     return api.get_service_names()
@@ -224,7 +249,6 @@ def run_services():
 
 def human_bytes(n):
     """Return the given bytes as a human-friendly string"""
-    # return str(n)  # TODO(mcotton): Raw should show bytes
 
     step = 1000
     abbrevs = ['KB', 'MB', 'GB', 'TB']
@@ -240,29 +264,61 @@ def human_bytes(n):
     return f"{n:.2f}{abbrev}"
 
 
-def files_iterator(responses, all_mode):
-    if not all_mode:
-        for (request, file_results_list) in responses:
-            for item in file_results_list:
-                yield (item["name"], human_bytes(item["size"]), item["hashes"][-1], item["id"], item["tags"])
-    else:
-        # TODO: this is screwed up, need to stick to classes better
-        all_responses = responses
-        for (request, responses) in all_responses:
-            for response_obj in responses:
-                if response_obj.response:
-                    for item in response_obj.response:
-                        yield (response_obj.client.nickname(), item["name"], human_bytes(item["size"]), item["hashes"][-1], item["id"], item["tags"])
+def files_iterator(all_responses, all_mode=False, raw_mode=False):
+    bytes_display_func = (lambda n: n) if raw_mode else human_bytes
+
+    for (request, responses) in all_responses:
+        for response_obj in responses:
+            if response_obj.response:
+                for item in response_obj.response:
+                    client = (response_obj.client.nickname(),) if all_mode else ()
+                    yield client + (item["name"], bytes_display_func(item["size"]), item["hashes"][-1], item["id"], item["tags"])
 
 
-def run_file_list(results, all_mode=False):
+def run_file_list(results, all_mode=False, pipe_mode=False):
     from mediaman.core import watertable
 
     columns = ((("service", 16),) if all_mode else ()) + (("name", 39 + (0 if all_mode else 19)), ("size", 9), ("hash", 22), ("id", 36), ("tags", 20))
 
-    gen = watertable.table_stream(columns, files_iterator(results, all_mode))
+    flat_results = files_iterator(results, all_mode=all_mode)
+
+    gen = watertable.table_stream(columns, flat_results)
+
+    # vals = []
     for row in gen:
-        print(row)
+        if not pipe_mode:
+            stderr(row)
+        # if val is not None:
+        #     vals.append(val)
+    # return vals
+
+
+@contextlib.contextmanager
+def pager():
+    true_stdout = sys.stdout
+
+    proc = subprocess.Popen([
+            "less",
+            "--quit-if-one-screen",
+            "--RAW-CONTROL-CHARS",
+            "--chop-long-lines",
+            "--no-init",
+            "--quit-on-intr",
+        ], stdin=subprocess.PIPE, stdout=sys.stdout, encoding="utf-8")
+
+    try:
+        sys.stdout = proc.stdin
+        yield proc
+        sys.stdout = true_stdout  # Must immediately reset stdout
+
+        proc.stdin.close()
+        proc.wait()
+    except KeyboardInterrupt:
+        pass  # let less handle this, -K will exit cleanly
+    except BrokenPipeError:
+        pass  # Happens when you hit `q` in the middle of the stdout
+
+    sys.stdout = true_stdout  # Must immediately reset stdout
 
 
 def main():
@@ -293,16 +349,28 @@ def main():
             results = api.run_fuzzy(*args.files, service_selector=service_selector)
         elif args.action == Action.SEARCH_BY_HASH.value:
             results = api.run_search_by_hash(*args.hashes, service_selector=service_selector)
-        elif args.action == Action.HAS_HASH.value:
-            results = api.has_hash(*args.hashes, service_selector=service_selector)
         else:
             raise NotImplementedError()
 
+        saved = []
+        accumulator = lambda it: (saved.append(e) or e for e in it)
+        results = ((request, accumulator(responses)) for request, responses in results)
+
         if args.raw:
-            for each in files_iterator(results, all_mode):
-                print(each)
+            for each in files_iterator(results, all_mode, raw_mode=True):
+                if not args.pipe:
+                    stderr(each)
         else:
-            run_file_list(results, all_mode=all_mode)
+            run_file_list(results, all_mode=all_mode, pipe_mode=args.pipe)
+
+        # TODO: Consider live-echoing the hashes...?
+        #       The run_file_list is pointless in pipe mode.
+        if args.pipe:
+            flat_saved = [e for r in saved for e in r.response]
+            hashes = [each["hashes"][-1] for each in flat_saved]
+            sys.stdout.write(" ".join(hashes))
+            sys.stdout.flush()
+
         exit(0)
 
     if args.action == "config":
@@ -310,62 +378,68 @@ def main():
             config.launch_editor()
         else:
             import pprint
-            print(pprint.pformat(api.run_config(args.service)))
+            stderr(pprint.pformat(api.run_config(args.service)))
             exit(0)
     elif args.action == "services":
-        print(run_services())
+        stderr(run_services())
         exit(0)
     elif args.action in {Action.HAS.value, Action.HAS_HASH.value}:
         if args.action == Action.HAS.value:
             inputs = args.files
             all_results = api.run_has(root, *args.files, service_selector=service_selector)
             max_filename = max([len(str(pathlib.Path(f).absolute())) for f in args.files])
-            print([str(pathlib.Path(f).absolute()) for f in args.files])
-            print(max_filename)
-            columns = (("name", max(4, max_filename)),)
+
+            dynamic_column_name = "name"
+            max_dynamic_width = max_filename
+
+            stderr([str(pathlib.Path(f).absolute()) for f in args.files])
+            stderr(max_filename)
         else:
             inputs = args.hashes
             all_results = api.run_has_hash(*args.hashes, service_selector=service_selector)
             max_hash_length = max(map(len, args.hashes))
-            columns = (("hash", max(4, max_hash_length)),)
+
+            dynamic_column_name = "hash"
+            max_dynamic_width = max_hash_length
 
         service_names = sorted(set(api.get_service_names()) - set(["all"]))
 
+        columns = tuple()
         if all_mode:
             columns += tuple((service, len(service)) for service in service_names)
         else:
             columns += (("found?", 6),)
+        columns += ((dynamic_column_name, max(4, max_dynamic_width)),)
 
-        def inverted_iter(services, files, all_results, all_mode=False):
-            if all_mode:
-                for (request, results) in all_results:
-                    service_map = {result.client.nickname(): ("No" if not result.response else "Yes") for result in results}
-                    yield (request,) + tuple(service_map.get(service, "--") for service in services)
-
-            else:
-                results = all_results
-                for (request, result) in results:
-                    yield (request, ("No" if not result else "Yes"))
+        def inverted_iter(services, files, all_results):
+            for (request, results) in all_results:
+                result_map = {result.client.nickname(): ("No" if not result.response else "Yes") for result in results}
+                if len(result_map) > 1:
+                    yield tuple(result_map.get(service, "--") for service in services) + (request,)
+                elif len(result_map) == 1:
+                    yield (list(result_map.values())[0], request)
+                else:
+                    yield ("No", request)
 
         gen = watertable.table_stream(columns, inverted_iter(
-            service_names, inputs, all_results, all_mode=all_mode))
+            service_names, inputs, all_results))
 
         for row in gen:
-            print(row)
+            stderr(row)
 
         # exit(1)
 
         # if results:
-        #     print(results)
+        #     stderr(results)
         # else:
         #     s = 's' if (len(args.files) > 1) else ''
         #     were = 'were' if (len(args.files) > 1) else 'was'
-        #     print(f"[-] No file{s} with the name{s} {args.files} {were} found.")
+        #     stderr(f"[-] No file{s} with the name{s} {args.files} {were} found.")
         #     exit(1)
     elif args.action == "get":
         results = api.run_get(root, *args.files, service_selector=service_selector)
         for result in results:
-            print(repr(result))
+            stderr(repr(result))
     elif args.action == "stream":
         stream = api.run_stream(root, args.file, service_selector=service_selector)
         for bytez in stream:
@@ -381,33 +455,35 @@ def main():
         if all_mode:
             for (path, results) in all_results:
                 for result in results:
-                    print(path, result)
+                    stderr((path, result))
         else:
             results = all_results
             for result in results:
-                print(repr(result))
+                stderr(repr(result))
     elif args.action == "cap":
         results = api.run_cap(service_selector=service_selector)
-        if service_selector != "all":
-            results = [results]
         for result in results:
-            print(result)
+            stderr(result)
+    elif args.action == "clone":
+        results = api.run_clone(
+            target_services=args.to_services,
+            hashes=args.hashes,
+            source_services=args.from_services,
+        )
     elif args.action == "sync":
         results = api.run_sync(service_selector=service_selector)
-        print(repr(results))
+        stderr(repr(results))
     elif args.action == Action.REFRESH.value:
         results = api.run_refresh(service_selector=service_selector)
-        print(repr(results))
+        stderr(repr(results))
     elif args.action == Action.REMOVE.value:
         results = api.run_remove(*args.hashes, service_selector=service_selector)
         for result in results:
-            print(repr(result))
+            stderr(repr(result))
     elif args.action == Action.STATS.value:
         results = api.run_stats(service_selector=service_selector)
-        if service_selector != "all":
-            results = [results]
         for result in results:
-            print(repr(result))
+            stderr(repr(result))
     elif args.action == Action.TAG.value:
         results = api.run_tag(
             root,
@@ -417,10 +493,8 @@ def main():
             set=args.set,
             service_selector=service_selector,
         )
-        if service_selector != "all":
-            results = [results]
         for result in results:
-            print(result)
+            stderr(result)
     elif args.action == Action.MIGRATE_TO_V2.value:
         api.run_migrate_to_v2(service_selector=service_selector)
     else:
@@ -428,4 +502,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if PAGER:
+        with pager():
+            main()
+    else:
+        main()

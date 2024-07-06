@@ -3,6 +3,7 @@ import base64
 import functools
 import json
 import os
+import secrets
 import subprocess
 import tempfile
 
@@ -58,11 +59,22 @@ def from_cacheable_string(string):
     return base64.b64decode(string.encode("utf-8"))
 
 
+# def gen_random_iv_for_aes_256():
+#     """
+#     Return a cryptographically-random 16-byte Initialization Vector for AES-256.
+#     """
+#     return secrets.token_hex(nbytes=16)
+
+
 def encrypt(request, keypath, cipher, digest):
     tempfile_ref = tempfile.NamedTemporaryFile(mode="wb+", delete=True)
 
+    # TODO: pass `-salt` here.  It's done by default but only in newer openssl's.
     args = [
         "openssl", "enc", "-e",
+        "-salt",
+        # TODO(mcotton): EXTREMELY DANGEROUS!  RANDOM IV WITHOUT STORAGE = LOST FOREVER
+        # "-iv", gen_random_iv_for_aes_256(),
         "-in", str(request.path),
         "-out", str(tempfile_ref.name),
         "-kfile", keypath, f"-{cipher}", "-md", digest,

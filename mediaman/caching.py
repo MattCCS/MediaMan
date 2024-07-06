@@ -13,7 +13,7 @@ REDIS = None
 REDIS_KEY_PREFIX = "mattccs.mediaman"
 logger = logtools.new_logger(__name__)
 
-if (USE_REDIS := bool(config.load("use-redis", default=False))):
+if (USE_REDIS := bool(config.load_bool("use-redis"))):
     try:
         import redis
         REDIS = redis.Redis()

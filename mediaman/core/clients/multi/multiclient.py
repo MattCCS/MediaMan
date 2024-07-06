@@ -1,6 +1,10 @@
 
+from typing import Iterator
+
+from mediaman.core.models import Response
 from mediaman.core.clients.multi import abstract
 from mediaman.core.clients.multi import methods
+from mediaman.services.abstract.models import AbstractResultFile
 
 
 def gen_all(gen):
@@ -15,20 +19,23 @@ def gen_all(gen):
 
 
 class Multiclient(abstract.AbstractMulticlient):
+    """
+    Class handling `mm all ...` commands.
+    """
 
-    def list_files(self):
+    def list_files(self) -> Iterator[Response]:
         return gen_all(methods.list_files(self.clients))
 
-    def has(self, request):
+    def has(self, request) -> Iterator[Response]:
         return gen_all(methods.has(self.clients, request))
 
-    def search_by_name(self, file_name):
+    def search_by_name(self, file_name) -> Iterator[Response]:
         return gen_all(methods.search_by_name(self.clients, file_name))
 
-    def fuzzy_search_by_name(self, file_name):
+    def fuzzy_search_by_name(self, file_name) -> Iterator[Response]:
         return gen_all(methods.fuzzy_search_by_name(self.clients, file_name))
 
-    def upload(self, request):
+    def upload(self, request) -> Iterator[Response]:
         return gen_all(methods.upload(self.clients, request))
 
     def download(self, root, file_path):
@@ -40,10 +47,10 @@ class Multiclient(abstract.AbstractMulticlient):
     def stream_range(self, root, file_path, offset, length):
         raise RuntimeError()  # `mm all streamrange` isn't allowed
 
-    def stats(self):
+    def stats(self) -> Iterator[Response]:
         return gen_all(methods.stats(self.clients))
 
-    def capacity(self):
+    def capacity(self) -> Iterator[Response]:
         return gen_all(methods.capacity(self.clients))
 
     def refresh(self):
@@ -55,13 +62,13 @@ class Multiclient(abstract.AbstractMulticlient):
     def refresh_global_hashes(self, request):
         raise NotImplementedError()
 
-    def search_by_hash(self, hash):
+    def search_by_hash(self, hash) -> Iterator[Response]:
         return gen_all(methods.search_by_hash(self.clients, hash))
 
-    def has_hash(self, hash):
+    def has_hash(self, hash) -> Iterator[Response]:
         return gen_all(methods.has_hash(self.clients, hash))
 
-    def tag(self, *args, **kwargs):
+    def tag(self, *args, **kwargs) -> Iterator[Response]:
         return gen_all(methods.tag(self.clients, *args, **kwargs))
 
     def migrate_to_v2(self):

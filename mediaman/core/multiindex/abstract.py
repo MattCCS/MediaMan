@@ -53,6 +53,13 @@ class AbstractMultiIndex(abc.ABC):
     def refresh(self):
         return self.client.refresh()
 
+    def clone(self, target_services, hashes=None, source_services=None):
+        return self.client.clone(
+            target_services=target_services,
+            hashes=hashes,
+            source_services=source_services,
+        )
+
     def sync(self):
         return self.client.sync()
 
