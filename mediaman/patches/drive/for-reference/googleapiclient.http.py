@@ -1090,7 +1090,7 @@ class BatchHttpRequest(object):
       batch_uri = _LEGACY_BATCH_URI
 
     if batch_uri == _LEGACY_BATCH_URI:
-      LOGGER.warn(
+      LOGGER.warning(
         "You have constructed a BatchHttpRequest using the legacy batch "
         "endpoint %s. This endpoint will be turned down on March 25, 2019. "
         "Please provide the API-specific endpoint or use "

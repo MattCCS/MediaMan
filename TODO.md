@@ -11,6 +11,8 @@
     - sync: Synchronize services with each other
     - stat: Show service status + latency
     - use: Show service quota usage
+    - offload: Upload file or dir and replace it on-disk with a .mm file
+        - restore: Replace on-disk .mm file with contents or dir from MediaMan
 
 - Add tagging to files for search/filtering
 

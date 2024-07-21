@@ -83,7 +83,7 @@ class GlobalMulticlient(abstract.AbstractMulticlient):
 
     def sort_clients_by_resolution_order(self):
         if not self._resolution_order:
-            logger.warn(f"No '{RESOLUTION_ORDER_KEY}' key found in config file.")
+            logger.warning(f"No '{RESOLUTION_ORDER_KEY}' key found in config file.")
             return
 
         logger.debug(f"'{RESOLUTION_ORDER_KEY}' key found: {self._resolution_order}")

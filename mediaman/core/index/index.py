@@ -491,7 +491,7 @@ class Index(base.BaseIndex):
         #         # TODO: MUST HANDLE THIS!
         #         # This will occur for "index", but also for
         #         # new/lost files.  Have to track them sanely.
-        #         logger.warn(f"Couldn't find metadata for sid '{sid}': {current_file}")
+        #         logger.warning(f"Couldn't find metadata for sid '{sid}': {current_file}")
         #         continue
 
         #     name = file_metadata["name"]

@@ -28,4 +28,4 @@ def resolve_abs_paths(root, file_ids):
         try:
             yield resolve_abs_path(root, file_id)
         except (IsADirectoryError, FileNotFoundError) as exc:
-            logger.debug(f"{traceback.format_exc()}: {file_id}")
+            logger.debug(f"{traceback.format_exc().strip()}: {file_id}")

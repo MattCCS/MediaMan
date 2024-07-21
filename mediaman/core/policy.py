@@ -90,7 +90,7 @@ class Policy:
                 logger.debug(traceback.format_exc())
 
         if failures:
-            logger.warn(f"Failed to load some services: {', '.join(failures)}")
+            logger.warning(f"Failed to load some services: {', '.join(failures)}")
 
     def load_client(self, service_selector):
         if service_selector is None:
